@@ -8,6 +8,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -45,6 +47,14 @@ public class PopupStore {
     @Column(nullable = false)
     private LocalDate endDate;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private PopupStoreCategory category;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private PopupStoreStatus status;
+
     @Lob
     private String description;
 
@@ -66,6 +76,8 @@ public class PopupStore {
             Double longitude,
             LocalDate startDate,
             LocalDate endDate,
+            PopupStoreCategory category,
+            PopupStoreStatus status,
             String description,
             String imageUrl
     ) {
@@ -75,6 +87,8 @@ public class PopupStore {
         this.longitude = longitude;
         this.startDate = startDate;
         this.endDate = endDate;
+        this.category = category;
+        this.status = status;
         this.description = description;
         this.imageUrl = imageUrl;
     }
@@ -86,6 +100,8 @@ public class PopupStore {
             Double longitude,
             LocalDate startDate,
             LocalDate endDate,
+            PopupStoreCategory category,
+            PopupStoreStatus status,
             String description,
             String imageUrl
     ) {
@@ -95,6 +111,8 @@ public class PopupStore {
         this.longitude = longitude;
         this.startDate = startDate;
         this.endDate = endDate;
+        this.category = category;
+        this.status = status;
         this.description = description;
         this.imageUrl = imageUrl;
     }
