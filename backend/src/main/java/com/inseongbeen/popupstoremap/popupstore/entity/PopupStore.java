@@ -1,11 +1,24 @@
 package com.inseongbeen.popupstoremap.popupstore.entity;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "popup_store")
 public class PopupStore {
@@ -14,5 +27,75 @@ public class PopupStore {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, length = 100)
     private String name;
+
+    @Column(nullable = false)
+    private String address;
+
+    @Column(nullable = false)
+    private Double latitude;
+
+    @Column(nullable = false)
+    private Double longitude;
+
+    @Column(nullable = false)
+    private LocalDate startDate;
+
+    @Column(nullable = false)
+    private LocalDate endDate;
+
+    @Lob
+    private String description;
+
+    @Column(length = 500)
+    private String imageUrl;
+
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;
+
+    public PopupStore(
+            String name,
+            String address,
+            Double latitude,
+            Double longitude,
+            LocalDate startDate,
+            LocalDate endDate,
+            String description,
+            String imageUrl
+    ) {
+        this.name = name;
+        this.address = address;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.description = description;
+        this.imageUrl = imageUrl;
+    }
+
+    public void update(
+            String name,
+            String address,
+            Double latitude,
+            Double longitude,
+            LocalDate startDate,
+            LocalDate endDate,
+            String description,
+            String imageUrl
+    ) {
+        this.name = name;
+        this.address = address;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.description = description;
+        this.imageUrl = imageUrl;
+    }
 }
