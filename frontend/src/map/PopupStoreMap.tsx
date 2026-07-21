@@ -13,7 +13,12 @@ import {
   markerStyleFor,
 } from './popupStoreMarkers'
 import { createRouteFeature, routeStyles } from './popupStoreRoute'
-import type { RouteCoordinate } from '../features/route/routeTypes'
+import {
+  createCurrentLocationFeatures,
+  currentLocationAccuracyStyle,
+  currentLocationMarkerStyle,
+} from './currentLocationLayer'
+import type { CurrentLocation, RouteCoordinate } from '../features/route/routeTypes'
 import type { PopupStore } from '../types/popupStore'
 
 interface PopupStoreMapProps {
@@ -21,6 +26,10 @@ interface PopupStoreMapProps {
   activeStoreId: number | null
   selectedStores: PopupStore[]
   routeCoordinates: RouteCoordinate[] | null
+  currentLocation: CurrentLocation | null
+  geolocationStatus: 'idle' | 'loading' | 'success' | 'error'
+  geolocationError: string | null
+  onRequestCurrentLocation: () => void
   onSelect: (popupStore: PopupStore) => void
 }
 
@@ -31,6 +40,10 @@ export function PopupStoreMap({
   activeStoreId,
   selectedStores,
   routeCoordinates,
+  currentLocation,
+  geolocationStatus,
+  geolocationError,
+  onRequestCurrentLocation,
   onSelect,
 }: PopupStoreMapProps) {
   const targetRef = useRef<HTMLDivElement>(null)
@@ -38,6 +51,8 @@ export function PopupStoreMap({
   const vectorSourceRef = useRef<VectorSource | null>(null)
   const vectorLayerRef = useRef<VectorLayer | null>(null)
   const routeSourceRef = useRef<VectorSource | null>(null)
+  const locationAccuracySourceRef = useRef<VectorSource | null>(null)
+  const locationMarkerSourceRef = useRef<VectorSource | null>(null)
   const onSelectRef = useRef(onSelect)
   const locatedPopupStores = popupStores.filter(isValidCoordinate)
 
@@ -50,15 +65,33 @@ export function PopupStoreMap({
 
     const vectorSource = new VectorSource()
     const routeSource = new VectorSource()
+    const locationAccuracySource = new VectorSource()
+    const locationMarkerSource = new VectorSource()
     const routeLayer = new VectorLayer({ source: routeSource, style: routeStyles, zIndex: 10 })
     const vectorLayer = new VectorLayer({
       source: vectorSource,
       style: markerStyleFor(null),
       zIndex: 20,
     })
+    const locationAccuracyLayer = new VectorLayer({
+      source: locationAccuracySource,
+      style: currentLocationAccuracyStyle,
+      zIndex: 30,
+    })
+    const locationMarkerLayer = new VectorLayer({
+      source: locationMarkerSource,
+      style: currentLocationMarkerStyle,
+      zIndex: 40,
+    })
     const map = new Map({
       target: targetRef.current,
-      layers: [new TileLayer({ source: new OSM() }), routeLayer, vectorLayer],
+      layers: [
+        new TileLayer({ source: new OSM() }),
+        routeLayer,
+        vectorLayer,
+        locationAccuracyLayer,
+        locationMarkerLayer,
+      ],
       view: new View({ center: SEONGSU_CENTER, zoom: 14.4 }),
     })
 
@@ -71,16 +104,22 @@ export function PopupStoreMap({
     vectorSourceRef.current = vectorSource
     vectorLayerRef.current = vectorLayer
     routeSourceRef.current = routeSource
+    locationAccuracySourceRef.current = locationAccuracySource
+    locationMarkerSourceRef.current = locationMarkerSource
     mapRef.current = map
     return () => {
       unByKey(clickKey)
       vectorSource.clear()
       routeSource.clear()
+      locationAccuracySource.clear()
+      locationMarkerSource.clear()
       map.setTarget(undefined)
       map.dispose()
       vectorSourceRef.current = null
       vectorLayerRef.current = null
       routeSourceRef.current = null
+      locationAccuracySourceRef.current = null
+      locationMarkerSourceRef.current = null
       mapRef.current = null
     }
   }, [])
@@ -118,6 +157,21 @@ export function PopupStoreMap({
     })
   }, [routeCoordinates])
 
+  useEffect(() => {
+    const accuracySource = locationAccuracySourceRef.current
+    const markerSource = locationMarkerSourceRef.current
+    const map = mapRef.current
+    if (!accuracySource || !markerSource || !map) return
+    accuracySource.clear()
+    markerSource.clear()
+    if (!currentLocation) return
+
+    const { center, accuracyFeature, markerFeature } = createCurrentLocationFeatures(currentLocation)
+    accuracySource.addFeature(accuracyFeature)
+    markerSource.addFeature(markerFeature)
+    map.getView().animate({ center, zoom: Math.max(map.getView().getZoom() ?? 0, 16), duration: 500 })
+  }, [currentLocation])
+
   return (
     <div className="map-container">
       <div ref={targetRef} className="map" aria-label="성수동 팝업스토어 지도" />
@@ -140,6 +194,16 @@ export function PopupStoreMap({
             </option>
           ))}
         </select>
+      </div>
+      <div className="geolocation-control">
+        <button
+          type="button"
+          disabled={geolocationStatus === 'loading'}
+          onClick={onRequestCurrentLocation}
+        >
+          {geolocationStatus === 'loading' ? '위치 확인 중…' : '현재 위치'}
+        </button>
+        {geolocationError && <p role="alert">{geolocationError}</p>}
       </div>
     </div>
   )

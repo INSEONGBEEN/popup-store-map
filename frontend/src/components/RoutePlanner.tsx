@@ -1,7 +1,7 @@
 import type { PopupStore } from '../types/popupStore'
 import type { AddSelectionResult } from '../features/route/routeSelection'
 import { MAX_ROUTE_STORES, MIN_ROUTE_STORES } from '../features/route/routeSelection'
-import type { RouteState } from '../features/route/routeTypes'
+import type { RouteOriginType, RouteState } from '../features/route/routeTypes'
 import { RouteSummary } from './RouteSummary'
 
 interface RoutePlannerProps {
@@ -9,11 +9,14 @@ interface RoutePlannerProps {
   selectedStores: PopupStore[]
   routeState: RouteState
   selectionMessage: string | null
+  originType: RouteOriginType
+  hasCurrentLocation: boolean
   onAdd: (popupStore: PopupStore) => AddSelectionResult
   onRemove: (popupStoreId: number) => void
   onMove: (popupStoreId: number, direction: 'up' | 'down') => void
   onClear: () => void
   onCalculate: () => void
+  onOriginTypeChange: (originType: RouteOriginType) => void
 }
 
 export function RoutePlanner({
@@ -21,13 +24,18 @@ export function RoutePlanner({
   selectedStores,
   routeState,
   selectionMessage,
+  originType,
+  hasCurrentLocation,
   onAdd,
   onRemove,
   onMove,
   onClear,
   onCalculate,
+  onOriginTypeChange,
 }: RoutePlannerProps) {
-  const canCalculate = selectedStores.length >= MIN_ROUTE_STORES && routeState.status !== 'loading'
+  const currentLocationMissing = originType === 'CURRENT_LOCATION' && !hasCurrentLocation
+  const canCalculate = selectedStores.length >= MIN_ROUTE_STORES &&
+    routeState.status !== 'loading' && !currentLocationMissing
 
   return (
     <aside className="route-planner" aria-labelledby="route-planner-title">
@@ -38,6 +46,26 @@ export function RoutePlanner({
         </div>
         <span>{selectedStores.length}/{MAX_ROUTE_STORES}</span>
       </div>
+
+      <fieldset className="route-origin-options">
+        <legend>출발지</legend>
+        {([
+          ['SEONGSU_STATION', '성수역'],
+          ['CURRENT_LOCATION', '현재 위치'],
+          ['FIRST_SELECTED_STORE', '첫 번째 선택 팝업'],
+        ] as const).map(([value, label]) => (
+          <label key={value}>
+            <input
+              type="radio"
+              name="route-origin"
+              value={value}
+              checked={originType === value}
+              onChange={() => onOriginTypeChange(value)}
+            />
+            {label}
+          </label>
+        ))}
+      </fieldset>
 
       <label className="route-add-field" htmlFor="route-store-select">
         방문지 추가
@@ -116,6 +144,9 @@ export function RoutePlanner({
       {selectedStores.length === 1 && (
         <p className="planner-message">경로를 찾으려면 한 곳을 더 선택해 주세요.</p>
       )}
+      {currentLocationMissing && (
+        <p className="planner-message error" role="alert">먼저 지도에서 현재 위치를 확인해 주세요.</p>
+      )}
       {routeState.status === 'stale' && (
         <p className="planner-message stale">선택 목록 또는 순서가 변경되었습니다. 경로를 다시 계산해 주세요.</p>
       )}
@@ -123,7 +154,7 @@ export function RoutePlanner({
         <p className="planner-message error" role="alert">{routeState.errorMessage}</p>
       )}
       {routeState.status === 'success' && routeState.result && (
-        <RouteSummary result={routeState.result} selectedStores={selectedStores} />
+        <RouteSummary result={routeState.result} />
       )}
     </aside>
   )

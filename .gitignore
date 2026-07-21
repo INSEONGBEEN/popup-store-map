@@ -60,3 +60,7 @@ out/
 # Virtual machine crash logs
 hs_err_pid*
 replay_pid*
+
+# Local Valhalla graph data and OSM extracts
+valhalla-data/
+*.osm.pbf

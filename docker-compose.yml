@@ -1,0 +1,28 @@
+services:
+  valhalla:
+    # Valhalla 3.8.2 multi-arch image verified on linux/arm64 and linux/amd64.
+    image: ghcr.io/valhalla/valhalla-scripted:latest@sha256:8edc58a1976d05ec27549a6eb09decf32382ae6b4530e52860f647525a08cbd8
+    ports:
+      - "${VALHALLA_PORT:-8002}:8002"
+    environment:
+      tile_urls: https://download.bbbike.org/osm/bbbike/Seoul/Seoul.osm.pbf
+      use_tiles_ignore_pbf: "True"
+      build_elevation: "False"
+      build_admins: "True"
+      build_time_zones: "True"
+      build_transit: "False"
+      build_tar: "True"
+      serve_tiles: "True"
+      server_threads: "${VALHALLA_SERVER_THREADS:-2}"
+    volumes:
+      - valhalla-data:/custom_files
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8002/status >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 10m
+    restart: unless-stopped
+
+volumes:
+  valhalla-data:

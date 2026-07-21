@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { PopupStoreDetails } from './components/PopupStoreDetails'
 import { RoutePlanner } from './components/RoutePlanner'
 import { usePopupStores } from './features/popupstore/usePopupStores'
+import { useCurrentLocation } from './features/geolocation/useCurrentLocation'
 import { useRoutePlanner } from './features/route/useRoutePlanner'
 import { PopupStoreMap } from './map/PopupStoreMap'
 import type { PopupStore } from './types/popupStore'
@@ -10,7 +11,8 @@ import './App.css'
 function App() {
   const { popupStores, isLoading, errorMessage } = usePopupStores()
   const [activeStore, setActiveStore] = useState<PopupStore | null>(null)
-  const routePlanner = useRoutePlanner()
+  const geolocation = useCurrentLocation()
+  const routePlanner = useRoutePlanner(geolocation.location)
   const activeStoreIsSelected = activeStore
     ? routePlanner.selectedStores.some(({ id }) => id === activeStore.id)
     : false
@@ -36,6 +38,10 @@ function App() {
             activeStoreId={activeStore?.id ?? null}
             selectedStores={routePlanner.selectedStores}
             routeCoordinates={routePlanner.routeState.result?.coordinates ?? null}
+            currentLocation={geolocation.location}
+            geolocationStatus={geolocation.status}
+            geolocationError={geolocation.errorMessage}
+            onRequestCurrentLocation={geolocation.requestLocation}
             onSelect={setActiveStore}
           />
 
@@ -60,11 +66,14 @@ function App() {
           selectedStores={routePlanner.selectedStores}
           routeState={routePlanner.routeState}
           selectionMessage={routePlanner.selectionMessage}
+          originType={routePlanner.originType}
+          hasCurrentLocation={geolocation.location !== null}
           onAdd={routePlanner.addStore}
           onRemove={routePlanner.removeStore}
           onMove={routePlanner.moveStore}
           onClear={routePlanner.clearStores}
           onCalculate={routePlanner.calculateRoute}
+          onOriginTypeChange={routePlanner.setOriginType}
         />
       </div>
 

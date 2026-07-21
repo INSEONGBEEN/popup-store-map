@@ -1,8 +1,8 @@
-import Feature from 'ol/Feature'
-import LineString from 'ol/geom/LineString'
-import { fromLonLat } from 'ol/proj'
-import Stroke from 'ol/style/Stroke'
-import Style from 'ol/style/Style'
+import Feature from 'ol/Feature.js'
+import LineString from 'ol/geom/LineString.js'
+import { fromLonLat } from 'ol/proj.js'
+import Stroke from 'ol/style/Stroke.js'
+import Style from 'ol/style/Style.js'
 import type { RouteCoordinate } from '../features/route/routeTypes'
 
 export const routeStyles = [

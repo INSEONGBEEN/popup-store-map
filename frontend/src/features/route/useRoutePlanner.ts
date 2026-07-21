@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import axios from 'axios'
-import { requestOsrmRoute, RouteRequestError } from '../../api/osrm'
+import { requestPedestrianRoute, PedestrianRouteError } from '../../api/pedestrianRoutes'
 import type { PopupStore } from '../../types/popupStore'
+import { buildRoutePlan, RoutePlanError } from './routeOrigins'
 import {
   addSelectedStore,
   moveSelectedStore,
@@ -9,7 +10,7 @@ import {
   routeStatusAfterSelectionChange,
   type AddSelectionResult,
 } from './routeSelection'
-import type { RouteState } from './routeTypes'
+import type { CurrentLocation, RouteOriginType, RouteState } from './routeTypes'
 
 const INITIAL_ROUTE_STATE: RouteState = {
   status: 'idle',
@@ -17,8 +18,9 @@ const INITIAL_ROUTE_STATE: RouteState = {
   errorMessage: null,
 }
 
-export function useRoutePlanner() {
+export function useRoutePlanner(currentLocation: CurrentLocation | null) {
   const [selectedStores, setSelectedStores] = useState<PopupStore[]>([])
+  const [originType, setOriginTypeState] = useState<RouteOriginType>('SEONGSU_STATION')
   const [routeState, setRouteState] = useState<RouteState>(INITIAL_ROUTE_STATE)
   const [selectionMessage, setSelectionMessage] = useState<string | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
@@ -74,6 +76,13 @@ export function useRoutePlanner() {
     setRouteState(INITIAL_ROUTE_STATE)
   }, [])
 
+  const setOriginType = useCallback((nextOriginType: RouteOriginType) => {
+    if (nextOriginType === originType) return
+    setOriginTypeState(nextOriginType)
+    setSelectionMessage(null)
+    invalidateRoute()
+  }, [invalidateRoute, originType])
+
   const calculateRoute = useCallback(async () => {
     abortControllerRef.current?.abort()
     const controller = new AbortController()
@@ -82,31 +91,38 @@ export function useRoutePlanner() {
     setRouteState({ status: 'loading', result: null, errorMessage: null })
 
     try {
-      const result = await requestOsrmRoute(selectedStores, controller.signal)
+      const plan = buildRoutePlan(originType, selectedStores, currentLocation)
+      const result = await requestPedestrianRoute(plan, controller.signal)
       if (abortControllerRef.current !== controller) return
       setRouteState({ status: 'success', result, errorMessage: null })
     } catch (error) {
       if (axios.isCancel(error) || abortControllerRef.current !== controller) return
       const message =
-        error instanceof RouteRequestError
+        error instanceof PedestrianRouteError || error instanceof RoutePlanError
           ? error.message
           : '경로를 계산하지 못했습니다. 잠시 후 다시 시도해 주세요.'
       setRouteState({ status: 'error', result: null, errorMessage: message })
     } finally {
       if (abortControllerRef.current === controller) abortControllerRef.current = null
     }
-  }, [selectedStores])
+  }, [currentLocation, originType, selectedStores])
+
+  useEffect(() => {
+    if (originType === 'CURRENT_LOCATION') invalidateRoute()
+  }, [currentLocation, invalidateRoute, originType])
 
   useEffect(() => () => abortControllerRef.current?.abort(), [])
 
   return {
     selectedStores,
+    originType,
     routeState,
     selectionMessage,
     addStore,
     removeStore,
     moveStore,
     clearStores,
+    setOriginType,
     calculateRoute,
   }
 }
