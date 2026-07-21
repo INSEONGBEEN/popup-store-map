@@ -2,6 +2,9 @@ import type { PopupStore } from '../types/popupStore'
 
 interface PopupStoreDetailsProps {
   popupStore: PopupStore
+  isRouteSelected: boolean
+  routeSelectionFull: boolean
+  onAddToRoute: (popupStore: PopupStore) => void
   onClose: () => void
 }
 
@@ -14,7 +17,13 @@ const statusLabels = {
   UPCOMING: '운영 예정', OPEN: '운영 중', CLOSED: '운영 종료',
 } as const
 
-export function PopupStoreDetails({ popupStore, onClose }: PopupStoreDetailsProps) {
+export function PopupStoreDetails({
+  popupStore,
+  isRouteSelected,
+  routeSelectionFull,
+  onAddToRoute,
+  onClose,
+}: PopupStoreDetailsProps) {
   return (
     <aside className="details-panel" aria-live="polite">
       <button type="button" className="close-button" onClick={onClose} aria-label="상세정보 닫기">×</button>
@@ -26,6 +35,14 @@ export function PopupStoreDetails({ popupStore, onClose }: PopupStoreDetailsProp
         <div><dt>운영 상태</dt><dd>{popupStore.status ? statusLabels[popupStore.status] : '미지정'}</dd></div>
         <div><dt>운영 기간</dt><dd>{popupStore.startDate} – {popupStore.endDate}</dd></div>
       </dl>
+      <button
+        type="button"
+        className="add-route-button"
+        disabled={isRouteSelected || routeSelectionFull}
+        onClick={() => onAddToRoute(popupStore)}
+      >
+        {isRouteSelected ? '경로에 선택됨' : '경로에 추가'}
+      </button>
     </aside>
   )
 }

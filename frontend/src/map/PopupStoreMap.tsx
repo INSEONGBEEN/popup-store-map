@@ -12,21 +12,32 @@ import {
   isValidCoordinate,
   markerStyleFor,
 } from './popupStoreMarkers'
+import { createRouteFeature, routeStyles } from './popupStoreRoute'
+import type { RouteCoordinate } from '../features/route/routeTypes'
 import type { PopupStore } from '../types/popupStore'
 
 interface PopupStoreMapProps {
   popupStores: PopupStore[]
-  selectedId: number | null
+  activeStoreId: number | null
+  selectedStores: PopupStore[]
+  routeCoordinates: RouteCoordinate[] | null
   onSelect: (popupStore: PopupStore) => void
 }
 
 const SEONGSU_CENTER = fromLonLat([127.0508, 37.5454])
 
-export function PopupStoreMap({ popupStores, selectedId, onSelect }: PopupStoreMapProps) {
+export function PopupStoreMap({
+  popupStores,
+  activeStoreId,
+  selectedStores,
+  routeCoordinates,
+  onSelect,
+}: PopupStoreMapProps) {
   const targetRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<Map | null>(null)
   const vectorSourceRef = useRef<VectorSource | null>(null)
   const vectorLayerRef = useRef<VectorLayer | null>(null)
+  const routeSourceRef = useRef<VectorSource | null>(null)
   const onSelectRef = useRef(onSelect)
   const locatedPopupStores = popupStores.filter(isValidCoordinate)
 
@@ -38,13 +49,16 @@ export function PopupStoreMap({ popupStores, selectedId, onSelect }: PopupStoreM
     if (!targetRef.current || mapRef.current) return
 
     const vectorSource = new VectorSource()
+    const routeSource = new VectorSource()
+    const routeLayer = new VectorLayer({ source: routeSource, style: routeStyles, zIndex: 10 })
     const vectorLayer = new VectorLayer({
       source: vectorSource,
       style: markerStyleFor(null),
+      zIndex: 20,
     })
     const map = new Map({
       target: targetRef.current,
-      layers: [new TileLayer({ source: new OSM() }), vectorLayer],
+      layers: [new TileLayer({ source: new OSM() }), routeLayer, vectorLayer],
       view: new View({ center: SEONGSU_CENTER, zoom: 14.4 }),
     })
 
@@ -56,14 +70,17 @@ export function PopupStoreMap({ popupStores, selectedId, onSelect }: PopupStoreM
 
     vectorSourceRef.current = vectorSource
     vectorLayerRef.current = vectorLayer
+    routeSourceRef.current = routeSource
     mapRef.current = map
     return () => {
       unByKey(clickKey)
       vectorSource.clear()
+      routeSource.clear()
       map.setTarget(undefined)
       map.dispose()
       vectorSourceRef.current = null
       vectorLayerRef.current = null
+      routeSourceRef.current = null
       mapRef.current = null
     }
   }, [])
@@ -76,9 +93,30 @@ export function PopupStoreMap({ popupStores, selectedId, onSelect }: PopupStoreM
   }, [popupStores])
 
   useEffect(() => {
-    vectorLayerRef.current?.setStyle(markerStyleFor(selectedId))
+    vectorLayerRef.current?.setStyle(
+      markerStyleFor(activeStoreId, selectedStores.map((popupStore) => popupStore.id)),
+    )
     vectorSourceRef.current?.changed()
-  }, [selectedId])
+  }, [activeStoreId, selectedStores])
+
+  useEffect(() => {
+    const routeSource = routeSourceRef.current
+    const map = mapRef.current
+    if (!routeSource || !map) return
+
+    routeSource.clear()
+    if (!routeCoordinates) return
+
+    const routeFeature = createRouteFeature(routeCoordinates)
+    if (!routeFeature) return
+
+    routeSource.addFeature(routeFeature)
+    map.getView().fit(routeFeature.getGeometry()!.getExtent(), {
+      padding: [70, 70, 70, 70],
+      maxZoom: 16,
+      duration: 450,
+    })
+  }, [routeCoordinates])
 
   return (
     <div className="map-container">
@@ -87,7 +125,7 @@ export function PopupStoreMap({ popupStores, selectedId, onSelect }: PopupStoreM
         <label htmlFor="popup-store-marker-select">키보드로 마커 선택</label>
         <select
           id="popup-store-marker-select"
-          value={selectedId ?? ''}
+          value={activeStoreId ?? ''}
           onChange={(event) => {
             const selected = locatedPopupStores.find(
               (popupStore) => popupStore.id === Number(event.target.value),

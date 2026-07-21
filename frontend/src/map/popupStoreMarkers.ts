@@ -5,6 +5,7 @@ import CircleStyle from 'ol/style/Circle'
 import Fill from 'ol/style/Fill'
 import Stroke from 'ol/style/Stroke'
 import Style from 'ol/style/Style'
+import Text from 'ol/style/Text'
 import type { PopupStore } from '../types/popupStore'
 
 export type LocatedPopupStore = PopupStore & {
@@ -20,10 +21,10 @@ const markerStyle = new Style({
   }),
 })
 
-const selectedMarkerStyle = new Style({
+const activeMarkerStyle = new Style({
   image: new CircleStyle({
     radius: 11,
-    fill: new Fill({ color: '#172554' }),
+    fill: new Fill({ color: '#ef5b3f' }),
     stroke: new Stroke({ color: '#fbbf24', width: 4 }),
   }),
   zIndex: 10,
@@ -53,7 +54,33 @@ export function createPopupStoreFeatures(stores: PopupStore[]): Feature<Point>[]
   })
 }
 
-export function markerStyleFor(selectedId: number | null) {
-  return (feature: FeatureLike) =>
-    feature.getId() === selectedId ? selectedMarkerStyle : markerStyle
+export function markerStyleFor(activeId: number | null, selectedStoreIds: number[] = []) {
+  const selectedOrder = new Map(selectedStoreIds.map((id, index) => [id, index + 1]))
+  const numberedStyles = new Map<number, Style>()
+
+  return (feature: FeatureLike) => {
+    const id = Number(feature.getId())
+    const order = selectedOrder.get(id)
+    if (order) {
+      let style = numberedStyles.get(order)
+      if (!style) {
+        style = new Style({
+          image: new CircleStyle({
+            radius: 12,
+            fill: new Fill({ color: '#172554' }),
+            stroke: new Stroke({ color: id === activeId ? '#fbbf24' : '#ffffff', width: 3 }),
+          }),
+          text: new Text({
+            text: String(order),
+            fill: new Fill({ color: '#ffffff' }),
+            font: '700 12px sans-serif',
+          }),
+          zIndex: 30,
+        })
+        numberedStyles.set(order, style)
+      }
+      return style
+    }
+    return id === activeId ? activeMarkerStyle : markerStyle
+  }
 }
