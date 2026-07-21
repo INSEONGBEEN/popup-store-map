@@ -43,26 +43,63 @@ Node.js와 npm이 필요합니다.
 
 ```bash
 cd frontend
-cp .env.example .env
 npm install
 npm run dev
 ```
 
-프론트엔드: <http://localhost:5173>
+Vite는 `0.0.0.0:5173`에서 수신하며 실행 로그에 다음 두 주소를 표시합니다.
 
-환경변수는 Backend 기본 URL을 지정합니다.
-
-```dotenv
-VITE_API_BASE_URL=http://localhost:8080
+```text
+Local:   http://localhost:5173/
+Network: http://<개발 PC의 LAN IP>:5173/
 ```
 
-실제 `.env`는 Git에서 제외되며 `.env.example`만 공유합니다. 프론트 개발 서버의 API 호출은
-백엔드를 `dev` 프로필로 실행할 때 `localhost:5173`과 `127.0.0.1:5173`에서만 허용됩니다.
+같은 Wi-Fi에 연결된 휴대폰에서는 `Network` 주소를 엽니다. macOS 방화벽이 연결을 묻는다면
+Node.js의 로컬 네트워크 수신을 허용해야 합니다. 공유기의 AP/client isolation이 켜져 있으면 같은
+Wi-Fi여도 기기 간 접속이 차단될 수 있습니다.
+
+Frontend API는 `localhost` 절대주소를 사용하지 않고 현재 origin의 `/api`를 호출합니다. Vite가
+`/api` 요청을 개발 PC의 `http://127.0.0.1:8080`으로 proxy하므로 휴대폰에서도 동일하게
+동작합니다. 브라우저와 Backend가 직접 교차 origin으로 통신하지 않아 LAN IP를 Spring CORS에
+추가하거나 모든 origin을 허용할 필요가 없습니다. 기존 dev CORS는 localhost 두 주소만 허용합니다.
+
+확인 순서:
+
+1. Backend를 8080 포트에서 실행합니다.
+2. `npm run dev` 로그의 Network URL을 휴대폰에서 엽니다.
+3. 팝업스토어 18개와 지도 마커가 표시되는지 확인합니다.
+4. 개발 PC에서 `http://<LAN IP>:5173/api/popup-stores/search?page=0&size=1`도 호출해 proxy를 확인할 수 있습니다.
+
+### 휴대폰 GPS 확인용 HTTPS 터널
+
+브라우저 Geolocation API는 `localhost` 또는 HTTPS secure context에서만 허용됩니다. LAN의
+`http://<LAN IP>:5173`에서는 화면과 API를 확인할 수 있지만 실제 GPS 권한 요청은 제한될 수
+있습니다. 개발용 실제 GPS 검증에는 [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/)의 임시 HTTPS 터널을 사용할 수 있습니다.
+
+```bash
+brew install cloudflared
+
+# 터미널 1: Backend
+cd backend
+./gradlew bootRun --args='--spring.profiles.active=dev'
+
+# 터미널 2: Vite (0.0.0.0:5173 + /api proxy)
+cd frontend
+npm run dev
+
+# 터미널 3
+cloudflared tunnel --url http://127.0.0.1:5173
+```
+
+cloudflared가 출력한 `https://...trycloudflare.com` 주소를 휴대폰에서 엽니다. 이 HTTPS origin의
+`/api`도 Vite proxy를 통해 로컬 Backend로 전달됩니다. Quick Tunnel URL은 인터넷에 공개되므로
+개발용 샘플 데이터에만 사용하고, 비밀번호·API Key·개인정보를 입력하지 말며 검증 후 프로세스를
+종료하세요. 운영 배포 수단으로 사용하지 않습니다.
 
 ## 지도와 마커 확인
 
 1. 백엔드를 `dev` 프로필로 실행합니다.
-2. 프론트엔드를 실행하고 <http://localhost:5173>에 접속합니다.
+2. 프론트엔드를 실행하고 Local 또는 같은 Wi-Fi의 Network URL에 접속합니다.
 3. OSM 지도에 표시된 마커를 클릭합니다.
 4. 상세 패널에서 이름, 주소, 카테고리, 운영 상태와 운영 기간을 확인합니다.
 5. 닫기 버튼으로 상세 패널을 닫을 수 있습니다.
@@ -169,18 +206,25 @@ docker compose down -v
 1. 마커 상세 패널의 `경로에 추가` 또는 경로 계획 패널의 선택 메뉴로 방문지를 추가합니다.
 2. 방문지는 최소 2개, 최대 8개까지 선택할 수 있으며 같은 장소는 중복 추가되지 않습니다.
 3. 출발지를 `성수역`, `현재 위치`, `첫 번째 선택 팝업` 중에서 선택합니다. 기본값은 성수역입니다.
-4. 목록의 위·아래 버튼으로 순서를 바꿀 수 있습니다. 표시된 선택 순서가 실제 방문 경로 순서입니다.
-5. `경로 찾기`를 누르면 Valhalla 도보 경로가 지도에 표시되고 총 도보거리와 예상 시간이 나타납니다.
-6. 현재 위치를 출발지로 사용하려면 지도에서 `현재 위치` 버튼을 먼저 눌러야 합니다.
-7. 출발지·순서·선택 목록을 바꾸면 이전 결과가 무효화되므로 경로를 다시 계산해야 합니다.
+4. 목록의 위·아래 버튼으로 순서를 바꿀 수 있습니다. `경로 찾기`는 이 순서를 그대로 사용합니다.
+5. `최적 순서 추천`은 Valhalla `sources_to_targets`의 실제 보행시간 행렬과 정확 Held–Karp open-route
+   알고리즘으로 원래 순서와 추천 순서를 비교합니다. 출발지는 고정하고 마지막 방문지는 자유이며,
+   추천 적용 전 원래 거리·시간과 절약값을 확인할 수 있습니다.
+6. `경로 찾기` 또는 `추천 순서 적용` 후 상세 도보 경로와 총 도보거리·예상 시간이 나타납니다.
+7. 현재 위치를 출발지로 사용하려면 지도에서 `현재 위치` 버튼을 먼저 눌러야 합니다.
+8. 출발지·순서·선택 목록을 바꾸면 이전 결과가 무효화되므로 경로를 다시 계산해야 합니다.
 
+현재 위치 버튼은 `watchPosition` 추적을 시작하며 다시 누르면 지도를 현재 위치로 복귀시킵니다.
+사용자가 지도를 드래그하면 free-pan 모드가 되고, `추적 종료`는 브라우저 watcher를 정리합니다.
 현재 위치는 브라우저 메모리와 지도에만 유지되고 Backend나 DB에 저장되지 않습니다. Geolocation은
 보안 정책상 `localhost` 또는 HTTPS에서만 정상 동작합니다. 위치 권한을 거부했다면 브라우저 사이트
 설정에서 권한을 변경한 뒤 다시 시도하세요.
 
-거리와 예상 시간은 OSM 보행 네트워크 기반이며 실제 보행 환경과 다를 수 있습니다. 현재는 선택한
-순서를 그대로 사용하며 최적 방문 순서를 자동 계산하지 않습니다. TSP/최적 순서 추천과 실시간
-내비게이션은 다음 단계로 남겨 둡니다.
+거리와 예상 시간은 OSM 보행 네트워크 기반이며 실제 보행 환경과 다를 수 있습니다. `길안내 시작`은
+실시간 GPS를 상세 경로에 투영해 남은 거리·시간과 Valhalla maneuver 안내를 갱신합니다. 경로에서
+35m를 넘는 상태가 정확도 50m 이내에서 3회 연속 확인되면 현재 위치부터 남은 방문지까지 자동
+재탐색하며, 재호출 간격은 최소 30초입니다. GPS 오차와 보행 네트워크 상태에 따라 실제 안내와 차이가
+있을 수 있으며 상용 내비게이션이나 실시간 교통 안내를 대신하지 않습니다.
 
 프론트엔드는 `GET /api/popup-stores/search?page=0&size=100&sort=createdAt,desc` 응답의
 `content` 배열을 사용합니다. 좌표가 없거나 유효 범위를 벗어난 항목은 오류 없이 마커에서 제외합니다.
@@ -200,5 +244,6 @@ npm run lint
 
 ## 아직 구현하지 않은 기능
 
-- TSP 기반 최적 방문 순서 추천
+- 8개를 초과하는 대규모 방문지 휴리스틱 최적화
+- 서버 저장형 여행 계획 및 상용 수준 음성/백그라운드 내비게이션
 - JWT 인증·인가

@@ -14,6 +14,12 @@
 - 성수역·현재 위치·첫 선택 팝업 출발지와 브라우저 Geolocation 지도 표시
 - 서울 OSM 그래프를 생성·재사용하는 Valhalla Docker Compose 개발 환경
 - 경로 API, 출발지, 위치 오류, 상세 LineString 변환 회귀 테스트
+- Valhalla 보행시간 행렬과 정확 Held-Karp 알고리즘 기반 최적 방문 순서 API
+- 원래 순서와 추천 순서의 거리·시간 비교 및 추천 순서 적용 UI
+- watchPosition 기반 실시간 위치 추적, follow/free-pan 및 추적 종료 기능
+- 상세 경로 투영, 남은 거리·시간, maneuver 안내와 경로 이탈 자동 재탐색 MVP
+- 같은 Wi-Fi 모바일 접속을 위한 Vite LAN listen과 same-origin API proxy
+- 실제 모바일 GPS 확인을 위한 cloudflared 임시 HTTPS 터널 문서
 
 ### Changed
 
@@ -22,3 +28,5 @@
 - backend/frontend 실행 및 개발 데이터 사용법을 README에 문서화
 - 공개 OSRM 자동차 경로를 로컬 Valhalla 보행 경로로 교체
 - API 응답의 전체 보행 경로 좌표가 지도에 표시되도록 경로 데이터 병합 수정
+- Valhalla maneuver shape index를 multi-leg 전체 경로 인덱스로 변환
+- Frontend API 호출을 localhost 절대주소에서 `/api` 상대경로로 변경

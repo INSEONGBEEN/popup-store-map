@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import Map from 'ol/Map'
 import View from 'ol/View'
 import { unByKey } from 'ol/Observable'
+import type { EventsKey } from 'ol/events'
 import TileLayer from 'ol/layer/Tile'
 import VectorLayer from 'ol/layer/Vector'
 import OSM from 'ol/source/OSM'
@@ -18,6 +19,7 @@ import {
   currentLocationAccuracyStyle,
   currentLocationMarkerStyle,
 } from './currentLocationLayer'
+import type { GeolocationStatus } from '../features/geolocation/useCurrentLocation'
 import type { CurrentLocation, RouteCoordinate } from '../features/route/routeTypes'
 import type { PopupStore } from '../types/popupStore'
 
@@ -27,9 +29,14 @@ interface PopupStoreMapProps {
   selectedStores: PopupStore[]
   routeCoordinates: RouteCoordinate[] | null
   currentLocation: CurrentLocation | null
-  geolocationStatus: 'idle' | 'loading' | 'success' | 'error'
+  geolocationStatus: GeolocationStatus
   geolocationError: string | null
+  followMode: boolean
+  recenterToken: number
   onRequestCurrentLocation: () => void
+  onStopTracking: () => void
+  onPauseFollow: () => void
+  headingUp: boolean
   onSelect: (popupStore: PopupStore) => void
 }
 
@@ -43,7 +50,12 @@ export function PopupStoreMap({
   currentLocation,
   geolocationStatus,
   geolocationError,
+  followMode,
+  recenterToken,
   onRequestCurrentLocation,
+  onStopTracking,
+  onPauseFollow,
+  headingUp,
   onSelect,
 }: PopupStoreMapProps) {
   const targetRef = useRef<HTMLDivElement>(null)
@@ -54,11 +66,16 @@ export function PopupStoreMap({
   const locationAccuracySourceRef = useRef<VectorSource | null>(null)
   const locationMarkerSourceRef = useRef<VectorSource | null>(null)
   const onSelectRef = useRef(onSelect)
+  const onPauseFollowRef = useRef(onPauseFollow)
   const locatedPopupStores = popupStores.filter(isValidCoordinate)
 
   useEffect(() => {
     onSelectRef.current = onSelect
   }, [onSelect])
+
+  useEffect(() => {
+    onPauseFollowRef.current = onPauseFollow
+  }, [onPauseFollow])
 
   useEffect(() => {
     if (!targetRef.current || mapRef.current) return
@@ -100,6 +117,9 @@ export function PopupStoreMap({
       const popupStore = feature?.get('popupStore') as PopupStore | undefined
       if (popupStore) onSelectRef.current(popupStore)
     })
+    const interactionKeys: EventsKey[] = [
+      map.on('pointerdrag', () => onPauseFollowRef.current()),
+    ]
 
     vectorSourceRef.current = vectorSource
     vectorLayerRef.current = vectorLayer
@@ -109,6 +129,7 @@ export function PopupStoreMap({
     mapRef.current = map
     return () => {
       unByKey(clickKey)
+      interactionKeys.forEach(unByKey)
       vectorSource.clear()
       routeSource.clear()
       locationAccuracySource.clear()
@@ -169,8 +190,13 @@ export function PopupStoreMap({
     const { center, accuracyFeature, markerFeature } = createCurrentLocationFeatures(currentLocation)
     accuracySource.addFeature(accuracyFeature)
     markerSource.addFeature(markerFeature)
-    map.getView().animate({ center, zoom: Math.max(map.getView().getZoom() ?? 0, 16), duration: 500 })
-  }, [currentLocation])
+    if (followMode) {
+      const rotation = headingUp && currentLocation.headingDegrees != null &&
+        (currentLocation.speedMetersPerSecond ?? 0) > 0.5
+        ? -currentLocation.headingDegrees * Math.PI / 180 : 0
+      map.getView().animate({ center, rotation, zoom: Math.max(map.getView().getZoom() ?? 0, 16), duration: 400 })
+    }
+  }, [currentLocation, followMode, headingUp, recenterToken])
 
   return (
     <div className="map-container">
@@ -198,11 +224,16 @@ export function PopupStoreMap({
       <div className="geolocation-control">
         <button
           type="button"
-          disabled={geolocationStatus === 'loading'}
+          disabled={geolocationStatus === 'locating'}
           onClick={onRequestCurrentLocation}
         >
-          {geolocationStatus === 'loading' ? '위치 확인 중…' : '현재 위치'}
+          {geolocationStatus === 'locating'
+            ? '위치 확인 중…'
+            : geolocationStatus === 'tracking' && !followMode ? '현재 위치로 복귀' : '현재 위치'}
         </button>
+        {geolocationStatus === 'tracking' && (
+          <button type="button" onClick={onStopTracking}>추적 종료</button>
+        )}
         {geolocationError && <p role="alert">{geolocationError}</p>}
       </div>
     </div>

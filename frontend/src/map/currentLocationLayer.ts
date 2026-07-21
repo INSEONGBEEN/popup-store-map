@@ -23,7 +23,8 @@ export const currentLocationMarkerStyle = new Style({
 
 export function createCurrentLocationFeatures(location: CurrentLocation) {
   const center = fromLonLat(location.coordinate)
-  const accuracyFeature = new Feature({ geometry: new CircleGeometry(center, location.accuracyMeters) })
+  const projectionScale = 1 / Math.cos(location.coordinate[1] * Math.PI / 180)
+  const accuracyFeature = new Feature({ geometry: new CircleGeometry(center, location.accuracyMeters * projectionScale) })
   const markerFeature = new Feature({ geometry: new Point(center) })
   return { center, accuracyFeature, markerFeature }
 }

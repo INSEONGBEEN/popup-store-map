@@ -8,6 +8,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.inseongbeen.popupstoremap.route.dto.PedestrianRouteRequestDto;
 import com.inseongbeen.popupstoremap.route.dto.PedestrianRouteResponseDto;
+import com.inseongbeen.popupstoremap.route.dto.PedestrianRouteOptimizationRequestDto;
+import com.inseongbeen.popupstoremap.route.dto.PedestrianRouteOptimizationResponseDto;
+import com.inseongbeen.popupstoremap.route.service.PedestrianRouteOptimizationService;
 import com.inseongbeen.popupstoremap.route.service.PedestrianRouteService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,9 +23,14 @@ import jakarta.validation.Valid;
 public class PedestrianRouteController {
 
     private final PedestrianRouteService pedestrianRouteService;
+    private final PedestrianRouteOptimizationService optimizationService;
 
-    public PedestrianRouteController(PedestrianRouteService pedestrianRouteService) {
+    public PedestrianRouteController(
+            PedestrianRouteService pedestrianRouteService,
+            PedestrianRouteOptimizationService optimizationService
+    ) {
         this.pedestrianRouteService = pedestrianRouteService;
+        this.optimizationService = optimizationService;
     }
 
     @Operation(summary = "도보 경로 계산", description = "입력 좌표 순서를 유지해 Valhalla 보행 경로를 계산합니다.")
@@ -39,5 +47,13 @@ public class PedestrianRouteController {
             @Valid @RequestBody PedestrianRouteRequestDto request
     ) {
         return ResponseEntity.ok(pedestrianRouteService.findRoute(request));
+    }
+
+    @Operation(summary = "도보 방문 순서 최적화", description = "Valhalla 보행 비용 행렬과 exact Held-Karp로 열린 방문 경로를 최적화합니다.")
+    @PostMapping("/pedestrian/optimize")
+    public ResponseEntity<PedestrianRouteOptimizationResponseDto> optimizePedestrianRoute(
+            @Valid @RequestBody PedestrianRouteOptimizationRequestDto request
+    ) {
+        return ResponseEntity.ok(optimizationService.optimize(request));
     }
 }

@@ -1,9 +1,8 @@
 import axios from 'axios'
 
-const apiBaseUrl = import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8080'
-
 export const httpClient = axios.create({
-  baseURL: apiBaseUrl,
+  // The browser always calls its current origin. Vite proxies /api in development.
+  baseURL: '/',
   timeout: 10_000,
   headers: { Accept: 'application/json' },
 })

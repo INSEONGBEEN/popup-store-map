@@ -1,7 +1,10 @@
 import type { PopupStore } from '../types/popupStore'
 import type { AddSelectionResult } from '../features/route/routeSelection'
 import { MAX_ROUTE_STORES, MIN_ROUTE_STORES } from '../features/route/routeSelection'
-import type { RouteOriginType, RouteState } from '../features/route/routeTypes'
+import type { RouteOptimizationState, RouteOriginType, RouteState } from '../features/route/routeTypes'
+import { formatDistance, formatDuration } from '../features/route/routeFormatters'
+import { NavigationPanel } from './NavigationPanel'
+import type { NavigationStatus } from '../features/navigation/usePedestrianNavigation'
 import { RouteSummary } from './RouteSummary'
 
 interface RoutePlannerProps {
@@ -17,6 +20,17 @@ interface RoutePlannerProps {
   onClear: () => void
   onCalculate: () => void
   onOriginTypeChange: (originType: RouteOriginType) => void
+  optimizationState: RouteOptimizationState
+  onRecommend: () => void
+  onApplyRecommendation: () => void
+  onRestoreOriginal: () => void
+  navigation: {
+    status: NavigationStatus; nextInstruction: string; remainingDistanceMeters: number
+    remainingDurationSeconds: number; distanceToRouteMeters: number; nextStopName: string | null
+    rerouteCount: number; errorMessage: string | null; canStart: boolean
+    onStart: () => void; onPause: () => void; onResume: () => void; onStop: () => void; onRetry: () => void
+    headingUp: boolean; onToggleHeading: () => void; onRecenter: () => void
+  }
 }
 
 export function RoutePlanner({
@@ -32,6 +46,11 @@ export function RoutePlanner({
   onClear,
   onCalculate,
   onOriginTypeChange,
+  optimizationState,
+  onRecommend,
+  onApplyRecommendation,
+  onRestoreOriginal,
+  navigation,
 }: RoutePlannerProps) {
   const currentLocationMissing = originType === 'CURRENT_LOCATION' && !hasCurrentLocation
   const canCalculate = selectedStores.length >= MIN_ROUTE_STORES &&
@@ -141,6 +160,29 @@ export function RoutePlanner({
         </button>
       </div>
 
+      <button
+        type="button"
+        className="optimize-action"
+        disabled={selectedStores.length < MIN_ROUTE_STORES || originType === 'FIRST_SELECTED_STORE' || optimizationState.status === 'loading'}
+        onClick={onRecommend}
+      >{optimizationState.status === 'loading' ? '최적 순서 계산 중…' : '최적 순서 추천'}</button>
+      {originType === 'FIRST_SELECTED_STORE' && <p className="planner-message">최적화는 성수역 또는 현재 위치 출발에서 사용할 수 있습니다.</p>}
+      {optimizationState.status === 'error' && <p className="planner-message error" role="alert">{optimizationState.errorMessage}</p>}
+      {optimizationState.result && <section className="optimization-result" aria-label="추천 순서 비교">
+        <h3>추천 결과 비교</h3>
+        <p>기존 순서: {optimizationState.result.originalStoreIds.map((id) => selectedStores.find((store) => store.id === id)?.name ?? id).join(' → ')}</p>
+        <p>추천 순서: {optimizationState.result.orderedStoreIds.map((id) => selectedStores.find((store) => store.id === id)?.name ?? id).join(' → ')}</p>
+        <dl className="route-summary-grid">
+          <div><dt>기존</dt><dd>{formatDistance(optimizationState.result.original.distanceMeters)} · {formatDuration(optimizationState.result.original.durationSeconds)}</dd></div>
+          <div><dt>추천</dt><dd>{formatDistance(optimizationState.result.optimized.distanceMeters)} · {formatDuration(optimizationState.result.optimized.durationSeconds)}</dd></div>
+          <div><dt>절약</dt><dd>{formatDistance(Math.max(0, optimizationState.result.savings.distanceMeters))} · {formatDuration(Math.max(0, optimizationState.result.savings.durationSeconds))}</dd></div>
+        </dl>
+        <div className="route-actions">
+          <button type="button" onClick={onApplyRecommendation}>추천 순서 적용</button>
+          {optimizationState.status === 'applied' && <button type="button" onClick={onRestoreOriginal}>기존 순서로 되돌리기</button>}
+        </div>
+      </section>}
+
       {selectedStores.length === 1 && (
         <p className="planner-message">경로를 찾으려면 한 곳을 더 선택해 주세요.</p>
       )}
@@ -156,6 +198,7 @@ export function RoutePlanner({
       {routeState.status === 'success' && routeState.result && (
         <RouteSummary result={routeState.result} />
       )}
+      <NavigationPanel {...navigation} />
     </aside>
   )
 }

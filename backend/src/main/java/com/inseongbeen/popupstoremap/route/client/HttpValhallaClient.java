@@ -23,12 +23,14 @@ public class HttpValhallaClient implements ValhallaClient {
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
     private final URI routeUri;
+    private final URI matrixUri;
     private final ValhallaProperties properties;
 
     public HttpValhallaClient(ValhallaProperties properties) {
         this.objectMapper = new ObjectMapper();
         this.properties = properties;
         this.routeUri = properties.baseUrl().resolve("/route");
+        this.matrixUri = properties.baseUrl().resolve("/sources_to_targets");
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(properties.connectTimeout())
                 .build();
@@ -36,8 +38,17 @@ public class HttpValhallaClient implements ValhallaClient {
 
     @Override
     public JsonNode route(JsonNode request) {
+        return post(routeUri, request);
+    }
+
+    @Override
+    public JsonNode matrix(JsonNode request) {
+        return post(matrixUri, request);
+    }
+
+    private JsonNode post(URI uri, JsonNode request) {
         try {
-            HttpRequest httpRequest = HttpRequest.newBuilder(routeUri)
+            HttpRequest httpRequest = HttpRequest.newBuilder(uri)
                     .timeout(properties.requestTimeout())
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(request)))

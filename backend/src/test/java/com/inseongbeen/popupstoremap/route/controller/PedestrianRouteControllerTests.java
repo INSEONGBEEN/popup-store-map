@@ -18,6 +18,7 @@ import com.inseongbeen.popupstoremap.common.exception.GlobalExceptionHandler;
 import com.inseongbeen.popupstoremap.route.exception.PedestrianRouteException;
 import com.inseongbeen.popupstoremap.route.exception.RouteErrorType;
 import com.inseongbeen.popupstoremap.route.service.PedestrianRouteService;
+import com.inseongbeen.popupstoremap.route.service.PedestrianRouteOptimizationService;
 
 class PedestrianRouteControllerTests {
 
@@ -27,8 +28,9 @@ class PedestrianRouteControllerTests {
     @BeforeEach
     void setUp() {
         routeService = mock(PedestrianRouteService.class);
+        PedestrianRouteOptimizationService optimizationService = mock(PedestrianRouteOptimizationService.class);
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new PedestrianRouteController(routeService))
+                .standaloneSetup(new PedestrianRouteController(routeService, optimizationService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }

@@ -355,3 +355,8 @@ footer { padding: 13px 4px 0; color: #94a3b8; font-size: 0.72rem; }
   .route-planner { height: auto; min-height: 0; }
   .details-panel { top: auto; bottom: 14px; left: 14px; right: 14px; width: auto; }
 }
+.optimize-action { width: 100%; margin-top: 12px; }
+.optimization-result, .navigation-panel { margin-top: 18px; padding: 16px; border-radius: 16px; background: #f3f7ff; }
+.optimization-result h3, .navigation-panel h3 { margin: 0 0 12px; }
+.optimization-result p, .navigation-panel p { margin: 8px 0; }
+.navigation-status { color: #52617d; font-size: .9rem; }

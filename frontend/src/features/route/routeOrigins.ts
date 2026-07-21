@@ -21,6 +21,21 @@ export interface RoutePlan {
   popupStoreCount: number
 }
 
+export function routeOriginCoordinate(
+  originType: RouteOriginType,
+  selectedStores: PopupStore[],
+  currentLocation: CurrentLocation | null,
+): RouteCoordinate {
+  if (originType === 'SEONGSU_STATION') return SEONGSU_STATION.coordinate
+  if (originType === 'CURRENT_LOCATION') {
+    if (!currentLocation) throw new RoutePlanError('먼저 지도에서 현재 위치를 확인해 주세요.')
+    assertCoordinate(currentLocation.coordinate, '현재 위치')
+    return currentLocation.coordinate
+  }
+  if (selectedStores.length === 0) throw new RoutePlanError('팝업스토어를 먼저 선택해 주세요.')
+  return toStoreCoordinate(selectedStores[0])
+}
+
 export function buildRoutePlan(
   originType: RouteOriginType,
   selectedStores: PopupStore[],

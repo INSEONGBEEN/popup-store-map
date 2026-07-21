@@ -3,7 +3,7 @@ import { httpClient } from './httpClient'
 import type { RoutePlan } from '../features/route/routeOrigins'
 import type { RouteCoordinate, RouteLeg, RouteResult } from '../features/route/routeTypes'
 
-interface PedestrianRouteApiResponse {
+export interface PedestrianRouteApiResponse {
   coordinates: Array<{ longitude: number; latitude: number }>
   distanceMeters: number
   durationSeconds: number
@@ -54,7 +54,15 @@ export function mergeRoutePlanWithResponse(
   response: PedestrianRouteApiResponse,
 ): RouteResult {
   const parsed = parsePedestrianRouteResponse(response)
-  const result = { ...plan, ...parsed }
+  const result: RouteResult = {
+    coordinates: parsed.coordinates,
+    distanceMeters: parsed.distanceMeters,
+    durationSeconds: parsed.durationSeconds,
+    legs: parsed.legs,
+    departureName: plan.departureName,
+    destinationName: plan.destinationName,
+    popupStoreCount: plan.popupStoreCount,
+  }
 
   if (import.meta.env?.DEV) {
     console.debug('[pedestrian-route]', JSON.stringify({

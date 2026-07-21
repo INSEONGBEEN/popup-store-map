@@ -79,7 +79,10 @@ public class PedestrianRouteService {
                     encodedShape.length(),
                     legCoordinates.size()
             );
-            if (!coordinates.isEmpty() && coordinates.getLast().equals(legCoordinates.getFirst())) {
+            boolean duplicateBoundary = !coordinates.isEmpty()
+                    && coordinates.getLast().equals(legCoordinates.getFirst());
+            int globalShapeOffset = coordinates.isEmpty() ? 0 : coordinates.size() - (duplicateBoundary ? 1 : 0);
+            if (duplicateBoundary) {
                 coordinates.addAll(legCoordinates.subList(1, legCoordinates.size()));
             } else {
                 coordinates.addAll(legCoordinates);
@@ -90,7 +93,7 @@ public class PedestrianRouteService {
                     index,
                     requiredNonNegativeNumber(legSummary, "length") * 1_000,
                     requiredNonNegativeNumber(legSummary, "time"),
-                    toManeuvers(legNode.path("maneuvers"))
+                    toManeuvers(legNode.path("maneuvers"), globalShapeOffset)
             ));
         }
 
@@ -101,7 +104,7 @@ public class PedestrianRouteService {
         return new PedestrianRouteResponseDto(coordinates, distanceMeters, durationSeconds, legs);
     }
 
-    private List<RouteManeuverDto> toManeuvers(JsonNode maneuversNode) {
+    private List<RouteManeuverDto> toManeuvers(JsonNode maneuversNode, int globalShapeOffset) {
         if (!maneuversNode.isArray()) {
             throw invalidResponse();
         }
@@ -111,10 +114,31 @@ public class PedestrianRouteService {
                     requiredText(maneuver, "instruction"),
                     requiredInteger(maneuver, "type"),
                     requiredNonNegativeNumber(maneuver, "length") * 1_000,
-                    requiredNonNegativeNumber(maneuver, "time")
+                    requiredNonNegativeNumber(maneuver, "time"),
+                    optionalTextList(maneuver.path("street_names")),
+                    globalShapeOffset + optionalNonNegativeInteger(maneuver, "begin_shape_index"),
+                    globalShapeOffset + optionalNonNegativeInteger(maneuver, "end_shape_index")
             ));
         }
         return maneuvers;
+    }
+
+    private List<String> optionalTextList(JsonNode values) {
+        if (values.isMissingNode() || values.isNull()) return List.of();
+        if (!values.isArray()) throw invalidResponse();
+        List<String> result = new ArrayList<>();
+        for (JsonNode value : values) {
+            if (!value.isTextual()) throw invalidResponse();
+            result.add(value.textValue());
+        }
+        return List.copyOf(result);
+    }
+
+    private int optionalNonNegativeInteger(JsonNode parent, String field) {
+        JsonNode value = parent.path(field);
+        if (value.isMissingNode()) return 0;
+        if (!value.canConvertToInt() || value.intValue() < 0) throw invalidResponse();
+        return value.intValue();
     }
 
     private double requiredNonNegativeNumber(JsonNode parent, String field) {

@@ -5,14 +5,21 @@ import { usePopupStores } from './features/popupstore/usePopupStores'
 import { useCurrentLocation } from './features/geolocation/useCurrentLocation'
 import { useRoutePlanner } from './features/route/useRoutePlanner'
 import { PopupStoreMap } from './map/PopupStoreMap'
+import { usePedestrianNavigation } from './features/navigation/usePedestrianNavigation'
 import type { PopupStore } from './types/popupStore'
 import './App.css'
 
 function App() {
   const { popupStores, isLoading, errorMessage } = usePopupStores()
   const [activeStore, setActiveStore] = useState<PopupStore | null>(null)
+  const [headingUp, setHeadingUp] = useState(false)
   const geolocation = useCurrentLocation()
   const routePlanner = useRoutePlanner(geolocation.location)
+  const navigation = usePedestrianNavigation(
+    routePlanner.routeState.result,
+    routePlanner.selectedStores,
+    geolocation.location,
+  )
   const activeStoreIsSelected = activeStore
     ? routePlanner.selectedStores.some(({ id }) => id === activeStore.id)
     : false
@@ -37,11 +44,16 @@ function App() {
             popupStores={popupStores}
             activeStoreId={activeStore?.id ?? null}
             selectedStores={routePlanner.selectedStores}
-            routeCoordinates={routePlanner.routeState.result?.coordinates ?? null}
+            routeCoordinates={navigation.activeRoute?.coordinates ?? routePlanner.routeState.result?.coordinates ?? null}
             currentLocation={geolocation.location}
             geolocationStatus={geolocation.status}
             geolocationError={geolocation.errorMessage}
+            followMode={geolocation.followMode}
+            recenterToken={geolocation.recenterToken}
             onRequestCurrentLocation={geolocation.requestLocation}
+            onStopTracking={geolocation.stopTracking}
+            onPauseFollow={geolocation.pauseFollow}
+            headingUp={headingUp && navigation.status !== 'inactive'}
             onSelect={setActiveStore}
           />
 
@@ -74,6 +86,29 @@ function App() {
           onClear={routePlanner.clearStores}
           onCalculate={routePlanner.calculateRoute}
           onOriginTypeChange={routePlanner.setOriginType}
+          optimizationState={routePlanner.optimizationState}
+          onRecommend={routePlanner.recommendOrder}
+          onApplyRecommendation={routePlanner.applyRecommendation}
+          onRestoreOriginal={routePlanner.restoreOriginalOrder}
+          navigation={{
+            status: navigation.status,
+            nextInstruction: navigation.nextInstruction,
+            remainingDistanceMeters: navigation.remainingDistanceMeters,
+            remainingDurationSeconds: navigation.remainingDurationSeconds,
+            distanceToRouteMeters: navigation.distanceToRouteMeters,
+            nextStopName: routePlanner.selectedStores[navigation.activeWaypointIndex]?.name ?? null,
+            rerouteCount: navigation.rerouteCount,
+            errorMessage: navigation.errorMessage,
+            canStart: routePlanner.routeState.result !== null && geolocation.location !== null,
+            onStart: navigation.start,
+            onPause: navigation.pause,
+            onResume: navigation.resume,
+            onStop: navigation.stop,
+            onRetry: navigation.reroute,
+            headingUp,
+            onToggleHeading: () => setHeadingUp((value) => !value),
+            onRecenter: geolocation.resumeFollow,
+          }}
         />
       </div>
 

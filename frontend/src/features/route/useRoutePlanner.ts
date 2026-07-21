@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import axios from 'axios'
 import { requestPedestrianRoute, PedestrianRouteError } from '../../api/pedestrianRoutes'
+import { requestRouteOptimization } from '../../api/routeOptimization'
 import type { PopupStore } from '../../types/popupStore'
-import { buildRoutePlan, RoutePlanError } from './routeOrigins'
+import { buildRoutePlan, routeOriginCoordinate, RoutePlanError, SEONGSU_STATION } from './routeOrigins'
 import {
   addSelectedStore,
   moveSelectedStore,
@@ -10,7 +11,12 @@ import {
   routeStatusAfterSelectionChange,
   type AddSelectionResult,
 } from './routeSelection'
-import type { CurrentLocation, RouteOriginType, RouteState } from './routeTypes'
+import type {
+  CurrentLocation,
+  RouteOptimizationState,
+  RouteOriginType,
+  RouteState,
+} from './routeTypes'
 
 const INITIAL_ROUTE_STATE: RouteState = {
   status: 'idle',
@@ -18,12 +24,19 @@ const INITIAL_ROUTE_STATE: RouteState = {
   errorMessage: null,
 }
 
+const INITIAL_OPTIMIZATION_STATE: RouteOptimizationState = {
+  status: 'idle', result: null, errorMessage: null,
+}
+
 export function useRoutePlanner(currentLocation: CurrentLocation | null) {
   const [selectedStores, setSelectedStores] = useState<PopupStore[]>([])
   const [originType, setOriginTypeState] = useState<RouteOriginType>('SEONGSU_STATION')
   const [routeState, setRouteState] = useState<RouteState>(INITIAL_ROUTE_STATE)
   const [selectionMessage, setSelectionMessage] = useState<string | null>(null)
+  const [optimizationState, setOptimizationState] = useState<RouteOptimizationState>(INITIAL_OPTIMIZATION_STATE)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const optimizationAbortRef = useRef<AbortController | null>(null)
+  const originalStoresRef = useRef<PopupStore[] | null>(null)
 
   const invalidateRoute = useCallback(() => {
     abortControllerRef.current?.abort()
@@ -33,6 +46,10 @@ export function useRoutePlanner(currentLocation: CurrentLocation | null) {
       result: null,
       errorMessage: null,
     }))
+    optimizationAbortRef.current?.abort()
+    optimizationAbortRef.current = null
+    originalStoresRef.current = null
+    setOptimizationState(INITIAL_OPTIMIZATION_STATE)
   }, [])
 
   const addStore = useCallback((popupStore: PopupStore): AddSelectionResult => {
@@ -74,6 +91,10 @@ export function useRoutePlanner(currentLocation: CurrentLocation | null) {
     setSelectedStores([])
     setSelectionMessage(null)
     setRouteState(INITIAL_ROUTE_STATE)
+    optimizationAbortRef.current?.abort()
+    optimizationAbortRef.current = null
+    originalStoresRef.current = null
+    setOptimizationState(INITIAL_OPTIMIZATION_STATE)
   }, [])
 
   const setOriginType = useCallback((nextOriginType: RouteOriginType) => {
@@ -107,22 +128,71 @@ export function useRoutePlanner(currentLocation: CurrentLocation | null) {
     }
   }, [currentLocation, originType, selectedStores])
 
-  useEffect(() => {
-    if (originType === 'CURRENT_LOCATION') invalidateRoute()
-  }, [currentLocation, invalidateRoute, originType])
+  const recommendOrder = useCallback(async () => {
+    optimizationAbortRef.current?.abort()
+    const controller = new AbortController()
+    optimizationAbortRef.current = controller
+    setOptimizationState({ status: 'loading', result: null, errorMessage: null })
+    try {
+      if (originType === 'FIRST_SELECTED_STORE') {
+        throw new RoutePlanError('최적 순서 추천은 성수역 또는 현재 위치 출발에서 사용할 수 있습니다.')
+      }
+      const origin = routeOriginCoordinate(originType, selectedStores, currentLocation)
+      const departureName = originType === 'SEONGSU_STATION' ? SEONGSU_STATION.name : '현재 위치'
+      const result = await requestRouteOptimization(
+        origin, selectedStores, departureName, controller.signal,
+      )
+      if (optimizationAbortRef.current !== controller) return
+      originalStoresRef.current = [...selectedStores]
+      setOptimizationState({ status: 'success', result, errorMessage: null })
+    } catch (error) {
+      if (axios.isCancel(error) || optimizationAbortRef.current !== controller) return
+      setOptimizationState({
+        status: 'error',
+        result: null,
+        errorMessage: error instanceof Error ? error.message : '최적 방문 순서를 계산하지 못했습니다.',
+      })
+    } finally {
+      if (optimizationAbortRef.current === controller) optimizationAbortRef.current = null
+    }
+  }, [currentLocation, originType, selectedStores])
 
-  useEffect(() => () => abortControllerRef.current?.abort(), [])
+  const applyRecommendation = useCallback(() => {
+    const result = optimizationState.result
+    if (!result) return
+    const ordered = result.orderedStoreIds.map((id) => selectedStores.find((store) => store.id === id))
+    if (ordered.some((store) => !store)) return
+    setSelectedStores(ordered as PopupStore[])
+    setRouteState({ status: 'success', result: result.route, errorMessage: null })
+    setOptimizationState((current) => ({ ...current, status: 'applied' }))
+  }, [optimizationState.result, selectedStores])
+
+  const restoreOriginalOrder = useCallback(() => {
+    if (!originalStoresRef.current) return
+    setSelectedStores(originalStoresRef.current)
+    setRouteState(INITIAL_ROUTE_STATE)
+    setOptimizationState((current) => ({ ...current, status: 'success' }))
+  }, [])
+
+  useEffect(() => () => {
+    abortControllerRef.current?.abort()
+    optimizationAbortRef.current?.abort()
+  }, [])
 
   return {
     selectedStores,
     originType,
     routeState,
     selectionMessage,
+    optimizationState,
     addStore,
     removeStore,
     moveStore,
     clearStores,
     setOriginType,
     calculateRoute,
+    recommendOrder,
+    applyRecommendation,
+    restoreOriginalOrder,
   }
 }
