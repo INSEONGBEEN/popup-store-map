@@ -1,6 +1,8 @@
 package com.inseongbeen.popupstoremap.favorite.repository;
 
 import java.util.Optional;
+import java.util.Collection;
+import java.util.List;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,4 +17,5 @@ public interface PopupFavoriteRepository extends JpaRepository<PopupFavorite, Lo
 
     @EntityGraph(attributePaths = "popupStore")
     Page<PopupFavorite> findAllByUserId(Long userId, Pageable pageable);
+    List<PopupFavorite> findAllByUserIdAndPopupStoreIdIn(Long userId, Collection<Long> popupStoreIds);
 }

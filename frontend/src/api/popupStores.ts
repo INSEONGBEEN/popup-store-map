@@ -34,5 +34,10 @@ export function normalizePopupStores(stores: PopupStore[]) {
       likedByCurrentVisitor: false,
     },
     reviewSummary: store.reviewSummary ?? { averageRating: 0, reviewCount: 0 },
+    personalization: store.personalization ?? {
+      favoritedByCurrentUser: false,
+      visitedByCurrentUser: false,
+      reviewedByCurrentUser: false,
+    },
   }))
 }

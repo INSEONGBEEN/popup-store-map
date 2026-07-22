@@ -51,6 +51,19 @@ Repository로 저장하며, 재시작할 때 각 샘플 이름이 이미 존재�
 - Cookie를 사용하는 refresh/logout 요청은 Origin이 전달된 경우 `AUTH_ALLOWED_ORIGINS` 목록으로
   검사합니다. 모든 origin 허용은 사용하지 않습니다.
 
+```text
+POST /api/auth/signup
+POST /api/auth/login
+POST /api/auth/refresh
+POST /api/auth/logout
+GET  /api/auth/me
+```
+
+새로고침 시 Frontend는 Refresh Cookie로 인증을 복원합니다. 여러 API가 동시에 401을 반환해도
+refresh는 single-flight 하나만 실행하고, 성공한 요청은 한 번만 재시도합니다. Access Token과
+원문 Refresh Token, 비밀번호, JWT 서명 키는 로그에 출력하지 않으며 Access Token을
+`localStorage` 또는 `sessionStorage`에 저장하지 않습니다.
+
 로그인 사용자는 카드와 상세의 Bookmark 버튼으로 개인 즐겨찾기를 관리할 수 있습니다. Heart는
 공개 좋아요 지표이고 Bookmark는 다른 사용자에게 공개되거나 featured 점수에 반영되지 않는 개인
 저장입니다. 비로그인 상태에서 Bookmark를 누르면 로그인 창이 열리고, 로그인 성공 후 원래 팝업을
@@ -88,6 +101,28 @@ PATCH  /api/popup-stores/{popupId}/reviews/{reviewId}
 DELETE /api/popup-stores/{popupId}/reviews/{reviewId}
 GET    /api/users/me/reviews
 ```
+
+헤더의 마이페이지는 프로필(이메일, 닉네임, 가입일), 최근 저장순 즐겨찾기,
+방문 기록, 내 리뷰와 로그아웃을 하나의 Drawer에서 제공합니다. 모바일에서는
+`100dvh`, safe area, 내부 스크롤을 사용하는 full-height Sheet로 동작합니다.
+
+### 회원 스키마 적용
+
+현재 프로젝트에는 Flyway/Liquibase가 없고 개발 DB는 기존 `ddl-auto=update` 정책을
+유지합니다. 운영 DB 정책을 임의로 바꾸지 않기 위해 자동 마이그레이션 의존성은
+추가하지 않았습니다. 대신 [회원 스키마 SQL](backend/docs/member-schema-postgresql.sql)을 제공합니다.
+
+적용 순서:
+
+1. 대상 PostgreSQL DB를 백업하고 스크립트를 리뷰합니다.
+2. 기존 `popup_store`, `popup_like` 테이블이 있는 DB에 SQL을 트랜잭션으로 적용합니다.
+3. `app_user` → `refresh_token`/`popup_like` 회원 연결 → `popup_favorite` →
+   `visit_history` → `popup_review`/`popup_review_summary` 순서로 생성됩니다.
+4. unique, check, FK와 사용자·팝업·생성일 조합 index를 확인한 뒤 애플리케이션을
+   배포합니다.
+
+스크립트는 민감한 DB 접속 정보를 포함하지 않으며, 실행 전 해당 환경의 기존
+스키마와 데이터를 반드시 검토해야 합니다.
 
 ## Frontend 실행
 
@@ -411,4 +446,6 @@ npm run lint
 
 - 8개를 초과하는 대규모 방문지 휴리스틱 최적화
 - 서버 저장형 여행 계획 및 상용 수준 음성/백그라운드 내비게이션
-- 즐겨찾기·방문 기록·방문 기반 리뷰·통합 마이페이지
+- 소셜 로그인, 이메일 인증, 비밀번호 재설정, 회원 탈퇴
+- 방문 기록 삭제, 이미지 리뷰, 리뷰 댓글·신고
+- 관리자 운영 화면과 상용 배포 구성

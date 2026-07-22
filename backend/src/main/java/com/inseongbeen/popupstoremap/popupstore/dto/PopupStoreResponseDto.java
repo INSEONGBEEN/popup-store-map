@@ -27,18 +27,25 @@ public record PopupStoreResponseDto(
         @Schema(description = "등록 시각", example = "2026-07-21T22:20:00") LocalDateTime createdAt,
         @Schema(description = "수정 시각", example = "2026-07-21T22:20:00") LocalDateTime updatedAt,
         @Schema(description = "참여 지표") PopupEngagementDto engagement,
-        @Schema(description = "리뷰 평균과 개수") ReviewSummaryDto reviewSummary
+        @Schema(description = "리뷰 평균과 개수") ReviewSummaryDto reviewSummary,
+        @Schema(description = "로그인 사용자 개인 상태") PopupPersonalizationDto personalization
 ) {
     public static PopupStoreResponseDto from(PopupStore popupStore) {
-        return from(popupStore, PopupEngagementDto.empty(), ReviewSummaryDto.empty());
+        return from(popupStore, PopupEngagementDto.empty(), ReviewSummaryDto.empty(), PopupPersonalizationDto.empty());
     }
 
     public static PopupStoreResponseDto from(PopupStore popupStore, PopupEngagementDto engagement) {
-        return from(popupStore, engagement, ReviewSummaryDto.empty());
+        return from(popupStore, engagement, ReviewSummaryDto.empty(), PopupPersonalizationDto.empty());
     }
 
     public static PopupStoreResponseDto from(PopupStore popupStore, PopupEngagementDto engagement,
                                              ReviewSummaryDto reviewSummary) {
+        return from(popupStore, engagement, reviewSummary, PopupPersonalizationDto.empty());
+    }
+
+    public static PopupStoreResponseDto from(PopupStore popupStore, PopupEngagementDto engagement,
+                                             ReviewSummaryDto reviewSummary,
+                                             PopupPersonalizationDto personalization) {
         return new PopupStoreResponseDto(
                 popupStore.getId(),
                 popupStore.getName(),
@@ -54,7 +61,8 @@ public record PopupStoreResponseDto(
                 popupStore.getCreatedAt(),
                 popupStore.getUpdatedAt(),
                 engagement,
-                reviewSummary
+                reviewSummary,
+                personalization
         );
     }
 }

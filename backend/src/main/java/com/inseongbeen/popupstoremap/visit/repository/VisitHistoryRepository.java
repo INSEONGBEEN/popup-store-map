@@ -9,6 +9,8 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.util.Collection;
+import java.util.List;
 
 import com.inseongbeen.popupstoremap.visit.entity.VisitHistory;
 
@@ -18,6 +20,9 @@ public interface VisitHistoryRepository extends JpaRepository<VisitHistory, Long
     Optional<VisitHistory> findTopByUserIdAndPopupStoreIdOrderByVisitedAtDesc(Long userId, Long popupStoreId);
     boolean existsByUserIdAndPopupStoreIdAndSource(Long userId, Long popupStoreId,
                                                    com.inseongbeen.popupstoremap.visit.entity.VisitSource source);
+    @Query("select distinct visit.popupStore.id from VisitHistory visit where visit.user.id = :userId and visit.popupStore.id in :popupStoreIds")
+    List<Long> findVisitedPopupStoreIds(@Param("userId") Long userId,
+                                        @Param("popupStoreIds") Collection<Long> popupStoreIds);
 
     @EntityGraph(attributePaths = "popupStore")
     @Query("""

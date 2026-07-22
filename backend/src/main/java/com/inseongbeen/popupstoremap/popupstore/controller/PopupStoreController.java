@@ -126,9 +126,11 @@ public class PopupStoreController {
     })
     @GetMapping("/{id}")
     public ResponseEntity<PopupStoreResponseDto> findById(
-            @Parameter(description = "팝업스토어 ID", example = "1") @PathVariable Long id
+            @Parameter(description = "팝업스토어 ID", example = "1") @PathVariable Long id,
+            @RequestHeader(value = "X-Anonymous-Visitor-Id", required = false) String anonymousVisitorId,
+            Authentication authentication
     ) {
-        return ResponseEntity.ok(popupStoreService.findById(id));
+        return ResponseEntity.ok(popupStoreService.findById(id, anonymousVisitorId, userId(authentication)));
     }
 
     @Operation(summary = "팝업스토어 수정", description = "ID에 해당하는 팝업스토어 정보를 수정합니다.")

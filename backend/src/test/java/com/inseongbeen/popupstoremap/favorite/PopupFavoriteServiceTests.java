@@ -28,12 +28,14 @@ import com.inseongbeen.popupstoremap.popupstore.entity.PopupStoreCategory;
 import com.inseongbeen.popupstoremap.popupstore.entity.PopupStoreStatus;
 import com.inseongbeen.popupstoremap.popupstore.exception.PopupStoreNotFoundException;
 import com.inseongbeen.popupstoremap.popupstore.repository.PopupStoreRepository;
+import com.inseongbeen.popupstoremap.popupstore.service.PopupStoreService;
 
 @SpringBootTest
 class PopupFavoriteServiceTests {
     @Autowired PopupFavoriteService favoriteService;
     @Autowired PopupFavoriteRepository favoriteRepository;
     @Autowired PopupStoreRepository popupStoreRepository;
+    @Autowired PopupStoreService popupStoreService;
     @Autowired AppUserRepository userRepository;
     @Autowired RefreshTokenRepository refreshTokenRepository;
     @Autowired AuthService authService;
@@ -89,6 +91,20 @@ class PopupFavoriteServiceTests {
     void missingPopupIsRejected() {
         assertThatThrownBy(() -> favoriteService.add(firstUser, Long.MAX_VALUE))
                 .isInstanceOf(PopupStoreNotFoundException.class);
+    }
+
+    @Test
+    void popupResponseContainsBatchLoadedPersonalizationForCurrentUser() {
+        favoriteService.add(firstUser, popupStoreId);
+
+        Long firstUserId = Long.valueOf(((Jwt) firstUser.getPrincipal()).getSubject());
+        var signedIn = popupStoreService.findById(popupStoreId, null, firstUserId);
+        var anonymous = popupStoreService.findById(popupStoreId, null, null);
+
+        assertThat(signedIn.personalization().favoritedByCurrentUser()).isTrue();
+        assertThat(signedIn.personalization().visitedByCurrentUser()).isFalse();
+        assertThat(signedIn.personalization().reviewedByCurrentUser()).isFalse();
+        assertThat(anonymous.personalization().favoritedByCurrentUser()).isFalse();
     }
 
     private static PageRequest page() {

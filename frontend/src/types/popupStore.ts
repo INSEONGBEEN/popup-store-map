@@ -31,6 +31,11 @@ export interface PopupStore {
   updatedAt: string
   engagement: PopupEngagement
   reviewSummary: { averageRating: number; reviewCount: number }
+  personalization: {
+    favoritedByCurrentUser: boolean
+    visitedByCurrentUser: boolean
+    reviewedByCurrentUser: boolean
+  }
 }
 
 export interface PageResponse<T> {

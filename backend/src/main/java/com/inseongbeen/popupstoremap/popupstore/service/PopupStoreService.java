@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.inseongbeen.popupstoremap.popupstore.dto.PageResponseDto;
+import com.inseongbeen.popupstoremap.popupstore.dto.PopupPersonalizationDto;
 import com.inseongbeen.popupstoremap.popupstore.dto.PopupStoreRequestDto;
 import com.inseongbeen.popupstoremap.popupstore.dto.PopupStoreResponseDto;
 import com.inseongbeen.popupstoremap.popupstore.entity.PopupStore;
@@ -28,6 +29,9 @@ import com.inseongbeen.popupstoremap.popupstore.repository.PopupStoreRepository;
 import com.inseongbeen.popupstoremap.popupstore.repository.PopupStoreSpecification;
 import com.inseongbeen.popupstoremap.review.dto.ReviewSummaryDto;
 import com.inseongbeen.popupstoremap.review.service.PopupReviewService;
+import com.inseongbeen.popupstoremap.favorite.repository.PopupFavoriteRepository;
+import com.inseongbeen.popupstoremap.review.repository.PopupReviewRepository;
+import com.inseongbeen.popupstoremap.visit.repository.VisitHistoryRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -45,6 +49,9 @@ public class PopupStoreService {
     private final PopupStoreRepository popupStoreRepository;
     private final PopupEngagementService engagementService;
     private final PopupReviewService reviewService;
+    private final PopupFavoriteRepository favoriteRepository;
+    private final VisitHistoryRepository visitRepository;
+    private final PopupReviewRepository reviewRepository;
 
     @Transactional
     public PopupStoreResponseDto create(PopupStoreRequestDto request) {
@@ -78,7 +85,21 @@ public class PopupStoreService {
     }
 
     public PopupStoreResponseDto findById(Long id) {
-        return PopupStoreResponseDto.from(getPopupStore(id));
+        return findById(id, null, null);
+    }
+
+    public PopupStoreResponseDto findById(Long id, String anonymousVisitorId, Long userId) {
+        PopupStore store = getPopupStore(id);
+        Long popupStoreId = store.getId();
+        return PopupStoreResponseDto.from(
+                store,
+                engagementService.summaries(List.of(popupStoreId), anonymousVisitorId, userId)
+                        .getOrDefault(popupStoreId, PopupEngagementDto.empty()),
+                reviewService.summaries(List.of(popupStoreId))
+                        .getOrDefault(popupStoreId, ReviewSummaryDto.empty()),
+                personalization(List.of(popupStoreId), userId)
+                        .getOrDefault(popupStoreId, PopupPersonalizationDto.empty())
+        );
     }
 
     public List<PopupStoreResponseDto> findFeatured(int requestedLimit, String anonymousVisitorId) {
@@ -144,9 +165,12 @@ public class PopupStoreService {
         );
         Map<Long, ReviewSummaryDto> reviews = reviewService.summaries(
                 stores.getContent().stream().map(PopupStore::getId).toList());
+        Map<Long, PopupPersonalizationDto> personalization = personalization(
+                stores.getContent().stream().map(PopupStore::getId).toList(), userId);
         Page<PopupStoreResponseDto> result = stores.map(store -> PopupStoreResponseDto.from(
                 store, engagement.getOrDefault(store.getId(), PopupEngagementDto.empty()),
-                reviews.getOrDefault(store.getId(), ReviewSummaryDto.empty())
+                reviews.getOrDefault(store.getId(), ReviewSummaryDto.empty()),
+                personalization.getOrDefault(store.getId(), PopupPersonalizationDto.empty())
         ));
 
         return PageResponseDto.from(result);
@@ -202,12 +226,27 @@ public class PopupStoreService {
         );
         Map<Long, ReviewSummaryDto> reviews = reviewService.summaries(
                 stores.stream().map(PopupStore::getId).toList());
+        Map<Long, PopupPersonalizationDto> personalization = personalization(
+                stores.stream().map(PopupStore::getId).toList(), userId);
         return stores.stream()
                 .map(store -> PopupStoreResponseDto.from(
                         store, engagement.getOrDefault(store.getId(), PopupEngagementDto.empty()),
-                        reviews.getOrDefault(store.getId(), ReviewSummaryDto.empty())
+                        reviews.getOrDefault(store.getId(), ReviewSummaryDto.empty()),
+                        personalization.getOrDefault(store.getId(), PopupPersonalizationDto.empty())
                 ))
                 .toList();
+    }
+
+    private Map<Long, PopupPersonalizationDto> personalization(List<Long> popupStoreIds, Long userId) {
+        if (userId == null || popupStoreIds.isEmpty()) return Map.of();
+        Set<Long> favorites = favoriteRepository.findAllByUserIdAndPopupStoreIdIn(userId, popupStoreIds).stream()
+                .map(favorite -> favorite.getPopupStore().getId()).collect(java.util.stream.Collectors.toSet());
+        Set<Long> visits = Set.copyOf(visitRepository.findVisitedPopupStoreIds(userId, popupStoreIds));
+        Set<Long> reviews = Set.copyOf(reviewRepository.findReviewedPopupStoreIds(userId, popupStoreIds));
+        return popupStoreIds.stream().collect(java.util.stream.Collectors.toMap(
+                id -> id,
+                id -> new PopupPersonalizationDto(favorites.contains(id), visits.contains(id), reviews.contains(id))
+        ));
     }
 
     private Pageable normalizePageable(Pageable pageable) {

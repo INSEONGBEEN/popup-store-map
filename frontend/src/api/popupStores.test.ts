@@ -26,3 +26,12 @@ test('참여 지표가 없는 이전 응답도 카드별 추가 요청 없이 0�
     likedByCurrentVisitor: false,
   })
 })
+
+test('비로그인 또는 이전 응답의 개인 상태는 false로 보완한다', () => {
+  const legacy = { ...store(1), personalization: undefined } as unknown as PopupStore
+  assert.deepEqual(normalizePopupStores([legacy])[0].personalization, {
+    favoritedByCurrentUser: false,
+    visitedByCurrentUser: false,
+    reviewedByCurrentUser: false,
+  })
+})
