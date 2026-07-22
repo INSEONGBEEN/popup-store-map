@@ -63,6 +63,18 @@ DELETE /api/users/me/favorites/{popupId}
 GET    /api/users/me/favorites?page=0&size=10&sort=createdAt,desc
 ```
 
+방문 기록은 로그인 사용자가 길안내 중 실제 목적지 도착 판정을 받거나, 상세 화면에서 확인 후
+`방문 완료 기록`을 누른 경우에만 생성됩니다. 같은 사용자·팝업·날짜는 한 건으로 유지하고 다른
+날짜의 재방문은 허용합니다. GPS 좌표, 위치 이력, 전체 이동 경로와 heading은 저장하지 않습니다.
+방문 기록 저장 실패는 진행 중인 길안내를 중단시키지 않습니다.
+
+```text
+POST /api/users/me/visits/{popupId}
+GET  /api/users/me/visits?page=0&size=10&from=2026-07-01&to=2026-07-31&sort=visitedAt,desc
+```
+
+현재 방문 기록 삭제 기능은 제공하지 않습니다.
+
 ## Frontend 실행
 
 Node.js와 npm이 필요합니다.

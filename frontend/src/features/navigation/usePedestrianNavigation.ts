@@ -5,6 +5,7 @@ import type { PopupStore } from '../../types/popupStore'
 import type { CurrentLocation, RouteResult } from '../route/routeTypes'
 import { buildReroutePlan } from './navigationRoute'
 import { haversineMeters, NAVIGATION_THRESHOLDS, nextManeuver, projectOntoRoute, remainingDuration, shouldConfirmOffRoute } from './navigationMath'
+import { markArrivalOnce } from './navigationArrival'
 
 export type NavigationStatus = 'inactive' | 'starting' | 'navigating' | 'rerouting' | 'arrived-at-waypoint' | 'completed' | 'paused' | 'error'
 
@@ -23,6 +24,8 @@ export function usePedestrianNavigation(
   const [nextInstruction, setNextInstruction] = useState('경로를 따라 계속 이동하세요.')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [rerouteCount, setRerouteCount] = useState(0)
+  const [arrivalEvent, setArrivalEvent] = useState<{ storeId: number; sequence: number } | null>(null)
+  const arrivedStoreIds = useRef(new Set<number>())
   const offRouteDistances = useRef<number[]>([])
   const lastRerouteAt = useRef(0)
   const rerouteAbort = useRef<AbortController | null>(null)
@@ -30,7 +33,7 @@ export function usePedestrianNavigation(
   const stop = useCallback(() => {
     rerouteAbort.current?.abort(); rerouteAbort.current = null
     setStatus('inactive'); setActiveRoute(null); setActiveWaypointIndex(0)
-    offRouteDistances.current = []
+    offRouteDistances.current = []; arrivedStoreIds.current.clear(); setArrivalEvent(null)
   }, [])
 
   const start = useCallback(() => {
@@ -38,6 +41,7 @@ export function usePedestrianNavigation(
       setStatus('error'); setErrorMessage('현재 위치와 유효한 도보 경로를 먼저 준비해 주세요.'); return
     }
     setStatus('starting'); setActiveRoute(plannedRoute); setActiveWaypointIndex(0); setProjectionIndex(0)
+    arrivedStoreIds.current.clear(); setArrivalEvent(null)
     setRemainingDistanceMeters(plannedRoute.distanceMeters); setRemainingDurationSeconds(plannedRoute.durationSeconds)
     setErrorMessage(null); setStatus('navigating')
   }, [currentLocation, plannedRoute, selectedStores.length])
@@ -79,6 +83,9 @@ export function usePedestrianNavigation(
     if (waypoint && waypoint.longitude != null && waypoint.latitude != null) {
       const radius = Math.max(NAVIGATION_THRESHOLDS.arrivalMeters, Math.min(45, currentLocation.accuracyMeters))
       if (haversineMeters(currentLocation.coordinate, [waypoint.longitude, waypoint.latitude]) <= radius) {
+        if (markArrivalOnce(arrivedStoreIds.current, waypoint.id)) {
+          setArrivalEvent((current) => ({ storeId: waypoint.id, sequence: (current?.sequence ?? 0) + 1 }))
+        }
         if (activeWaypointIndex === selectedStores.length - 1) setStatus('completed')
         else { setStatus('arrived-at-waypoint'); setActiveWaypointIndex((value) => value + 1) }
         return
@@ -94,6 +101,7 @@ export function usePedestrianNavigation(
   return {
     status, activeRoute, activeWaypointIndex, remainingDistanceMeters, remainingDurationSeconds,
     distanceToRouteMeters, nextInstruction, errorMessage, rerouteCount,
+    arrivalEvent,
     start, stop, reroute,
     pause: () => setStatus('paused'),
     resume: () => activeRoute && setStatus('navigating'),

@@ -15,6 +15,7 @@ import { PopupStoreMap, type GpsDisplayMode } from './map/PopupStoreMap'
 import type { PopupStore } from './types/popupStore'
 import { useAuth } from './features/auth/authContext'
 import { useFavorites } from './features/favorites/useFavorites'
+import { useVisits } from './features/visits/useVisits'
 import './App.css'
 
 function App() {
@@ -41,6 +42,8 @@ function App() {
   const guidancePreparationStartedRef = useRef(false)
   const planAddRecordedRef = useRef(new Set<number>())
   const pendingFavoriteRef = useRef<number | null>(null)
+  const pendingVisitRef = useRef<number | null>(null)
+  const handledArrivalSequenceRef = useRef(0)
   const initialLocateCenteredRef = useRef(false)
   const locatePauseTimerRef = useRef<number | null>(null)
   const geolocation = useCurrentLocation()
@@ -84,6 +87,7 @@ function App() {
     window.setTimeout(() => setToastMessage((current) => current === message ? null : current), 2200)
   }, [])
   const favorites = useFavorites(showToast)
+  const visits = useVisits(showToast)
 
   const toggleFavorite = useCallback((store: PopupStore) => {
     if (!auth.isAuthenticated) {
@@ -102,6 +106,38 @@ function App() {
     const store = popupStores.find(({ id }) => id === popupStoreId)
     if (store) void favorites.toggle(store).then(() => showToast('로그인 후 즐겨찾기에 저장했습니다.')).catch(() => undefined)
   }, [auth.isAuthenticated, favorites, popupStores, showToast])
+
+  const confirmVisit = useCallback((store: PopupStore) => {
+    if (!window.confirm(`${store.name} 방문을 완료했나요? 방문 날짜만 저장되며 위치 정보는 저장하지 않습니다.`)) return
+    if (!auth.isAuthenticated) {
+      pendingVisitRef.current = store.id
+      setAuthModal({ open: true, mode: 'login' })
+      return
+    }
+    void visits.record(store.id, 'MANUAL_CONFIRMATION')
+      .then(() => showToast('방문 완료를 기록했습니다.')).catch(() => showToast('방문 기록을 저장하지 못했습니다.'))
+  }, [auth.isAuthenticated, showToast, visits])
+
+  useEffect(() => {
+    if (!auth.isAuthenticated || pendingVisitRef.current == null) return
+    const popupStoreId = pendingVisitRef.current
+    pendingVisitRef.current = null
+    void visits.record(popupStoreId, 'MANUAL_CONFIRMATION')
+      .then(() => showToast('로그인 후 방문 완료를 기록했습니다.')).catch(() => showToast('방문 기록을 저장하지 못했습니다.'))
+  }, [auth.isAuthenticated, showToast, visits])
+
+  useEffect(() => {
+    const arrival = navigation.arrivalEvent
+    if (!arrival || arrival.sequence <= handledArrivalSequenceRef.current) return
+    handledArrivalSequenceRef.current = arrival.sequence
+    if (!auth.isAuthenticated) {
+      showToast('도착했습니다. 로그인하면 방문 기록을 저장할 수 있어요.')
+      return
+    }
+    void visits.record(arrival.storeId, 'NAVIGATION_ARRIVAL')
+      .then(() => showToast('도착 방문 기록을 저장했습니다.'))
+      .catch(() => showToast('방문 기록 저장에 실패했지만 길안내는 계속됩니다.'))
+  }, [auth.isAuthenticated, navigation.arrivalEvent, showToast, visits])
 
   const recordDetailsView = useCallback((store: PopupStore) => {
     void recordPopupView(store.id).then((engagement) => updateEngagement(store.id, engagement)).catch(() => undefined)
@@ -276,6 +312,7 @@ function App() {
     {activeStore && !navigationActive && <MapPopupDetailsDrawer popupStore={activeStore} isRouteSelected={activeStoreIsSelected}
       routeSelectionFull={routePlanner.selectedStores.length >= 8} onToggleRoute={toggleSchedule}
       onToggleLike={toggleLike} isFavorited={favorites.favoriteIds.has(activeStore.id)} onToggleFavorite={toggleFavorite}
+      visited={visits.visitedStoreIds.has(activeStore.id)} onConfirmVisit={confirmVisit}
       onViewOnMap={() => document.getElementById('explore-map')?.scrollIntoView({ behavior: 'smooth' })}
       onClose={() => setActiveStore(null)} />}
   </section>
@@ -335,6 +372,7 @@ function App() {
     {toastMessage && <div className="app-toast" role="status">{toastMessage}</div>}
     <AuthModal open={authModal.open} initialMode={authModal.mode} onClose={() => setAuthModal((current) => ({ ...current, open: false }))} />
     <MyPageDrawer open={myPageOpen} user={auth.user} favorites={favorites.items} isLoading={favorites.isLoading}
+      visits={visits.items} visitsLoading={visits.isLoading}
       onClose={() => setMyPageOpen(false)} onOpenDetails={(store) => { setMyPageOpen(false); openHomeDetails(store) }}
       onRemoveFavorite={toggleFavorite} onAddToSchedule={toggleSchedule}
       onLogout={() => void auth.logout().then(() => { setMyPageOpen(false); showToast('로그아웃했습니다.') })} />
@@ -342,6 +380,7 @@ function App() {
       isRouteSelected={routePlanner.selectedStores.some(({ id }) => id === homeDetailStore.id)}
       routeSelectionFull={routePlanner.selectedStores.length >= 8} onToggleRoute={toggleSchedule}
       onToggleLike={toggleLike} isFavorited={favorites.favoriteIds.has(homeDetailStore.id)} onToggleFavorite={toggleFavorite}
+      visited={visits.visitedStoreIds.has(homeDetailStore.id)} onConfirmVisit={confirmVisit}
       onClose={() => setHomeDetailStore(null)} onViewOnMap={() => {
         const store = homeDetailStore
         setHomeDetailStore(null)
