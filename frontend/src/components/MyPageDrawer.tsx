@@ -3,6 +3,7 @@ import type { FavoriteItem } from '../api/favorites'
 import type { AuthUser } from '../api/auth'
 import type { PopupStore } from '../types/popupStore'
 import type { VisitItem } from '../api/visits'
+import type { MyReview } from '../api/reviews'
 
 interface Props {
   open: boolean
@@ -11,6 +12,8 @@ interface Props {
   isLoading: boolean
   visits: VisitItem[]
   visitsLoading: boolean
+  reviews: MyReview[]
+  onDeleteReview: (review: MyReview) => void
   onClose: () => void
   onOpenDetails: (store: PopupStore) => void
   onRemoveFavorite: (store: PopupStore) => void
@@ -19,7 +22,7 @@ interface Props {
 }
 
 export function MyPageDrawer(props: Props) {
-  const [tab, setTab] = useState<'favorites' | 'visits'>('favorites')
+  const [tab, setTab] = useState<'favorites' | 'visits' | 'reviews'>('favorites')
   const panelRef = useRef<HTMLElement>(null)
   const closeRef = useRef(props.onClose)
   closeRef.current = props.onClose
@@ -41,7 +44,8 @@ export function MyPageDrawer(props: Props) {
       <p className="eyebrow">MY SEONGSU</p><h2 id="mypage-title">{props.user.nickname}님의 저장 목록</h2>
       <section className="mypage-profile"><span>{props.user.email}</span><small>가입일 {props.user.createdAt.slice(0, 10)}</small></section>
       <nav className="mypage-tabs" aria-label="마이페이지 메뉴"><button type="button" className={tab === 'favorites' ? 'active' : ''} onClick={() => setTab('favorites')}>즐겨찾기</button>
-        <button type="button" className={tab === 'visits' ? 'active' : ''} onClick={() => setTab('visits')}>방문 기록</button><button type="button" disabled>내 리뷰</button></nav>
+        <button type="button" className={tab === 'visits' ? 'active' : ''} onClick={() => setTab('visits')}>방문 기록</button>
+        <button type="button" className={tab === 'reviews' ? 'active' : ''} onClick={() => setTab('reviews')}>내 리뷰</button></nav>
       {tab === 'favorites' && <section className="mypage-content" aria-label="즐겨찾기 목록">
         {props.isLoading ? <p className="mypage-empty">즐겨찾기를 불러오는 중입니다…</p> : props.favorites.length === 0
           ? <p className="mypage-empty">저장한 팝업이 없습니다.<br />카드의 북마크 버튼으로 관심 팝업을 모아보세요.</p>
@@ -59,6 +63,15 @@ export function MyPageDrawer(props: Props) {
             <button type="button" className="mypage-favorite-main" onClick={() => props.onOpenDetails(visit.popupStore)}>
               <strong>{visit.popupStore.name}</strong><span>{visit.visitDate} · {visit.source === 'NAVIGATION_ARRIVAL' ? '길안내 도착' : '직접 완료'}</span></button>
             <div><button type="button" onClick={() => props.onAddToSchedule(visit.popupStore)}>다시 일정</button></div>
+          </li>)}</ul>}
+      </section>}
+      {tab === 'reviews' && <section className="mypage-content" aria-label="내 리뷰 목록">
+        {props.reviews.length === 0 ? <p className="mypage-empty">작성한 리뷰가 없습니다.</p>
+          : <ul>{props.reviews.map((item) => <li key={item.review.reviewId}>
+            <button type="button" className="mypage-favorite-main" onClick={() => props.onOpenDetails(item.popupStore)}>
+              <strong>{item.popupStore.name} · {item.review.rating}점</strong><span>{item.review.content}</span></button>
+            <div><button type="button" onClick={() => props.onOpenDetails(item.popupStore)}>수정</button>
+              <button type="button" onClick={() => props.onDeleteReview(item)}>삭제</button></div>
           </li>)}</ul>}
       </section>}
       <button type="button" className="mypage-logout" onClick={props.onLogout}>로그아웃</button>

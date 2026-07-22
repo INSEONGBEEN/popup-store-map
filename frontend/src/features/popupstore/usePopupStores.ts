@@ -12,6 +12,7 @@ interface PopupStoreQueryState {
 
 export function usePopupStores(authIdentity: string = 'anonymous'): PopupStoreQueryState & {
   updateEngagement: (popupStoreId: number, engagement: PopupEngagement) => void
+  updateReviewSummary: (popupStoreId: number, reviewSummary: PopupStore['reviewSummary']) => void
 } {
   const [state, setState] = useState<PopupStoreQueryState>({
     popupStores: [],
@@ -55,5 +56,13 @@ export function usePopupStores(authIdentity: string = 'anonymous'): PopupStoreQu
     }))
   }
 
-  return { ...state, updateEngagement }
+  const updateReviewSummary = (popupStoreId: number, reviewSummary: PopupStore['reviewSummary']) => {
+    setState((current) => ({
+      ...current,
+      popupStores: current.popupStores.map((store) => store.id === popupStoreId ? { ...store, reviewSummary } : store),
+      featuredStores: current.featuredStores.map((store) => store.id === popupStoreId ? { ...store, reviewSummary } : store),
+    }))
+  }
+
+  return { ...state, updateEngagement, updateReviewSummary }
 }

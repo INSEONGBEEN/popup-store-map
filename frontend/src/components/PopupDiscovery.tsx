@@ -135,6 +135,9 @@ function PopupCard({ store, index, compact = false, selectedStores, activeStoreI
         {favoriteIds.has(store.id) ? '🔖' : '♧'}
       </button>
       <EngagementMetric label="오늘 일정 담기" icon="⌖" value={store.engagement.planAddCount} />
+      <span className="engagement-metric" aria-label={`평균 평점 ${store.reviewSummary.averageRating.toFixed(1)}, 리뷰 ${store.reviewSummary.reviewCount}개`}>
+        ★ {store.reviewSummary.averageRating.toFixed(1)} ({store.reviewSummary.reviewCount})
+      </span>
       <button type="button" className={`schedule-add${selected ? ' selected' : ''}`}
         onClick={(event) => { event.preventDefault(); event.stopPropagation(); onAddToSchedule(store) }}
         aria-label={`${store.name} ${selected ? '오늘 일정에서 제거' : '오늘 일정에 추가'}`}

@@ -16,11 +16,13 @@ import type { PopupStore } from './types/popupStore'
 import { useAuth } from './features/auth/authContext'
 import { useFavorites } from './features/favorites/useFavorites'
 import { useVisits } from './features/visits/useVisits'
+import { useMyReviews } from './features/reviews/useMyReviews'
+import { deleteReview, type MyReview } from './api/reviews'
 import './App.css'
 
 function App() {
   const auth = useAuth()
-  const { popupStores, featuredStores, isLoading, errorMessage, updateEngagement } = usePopupStores(
+  const { popupStores, featuredStores, isLoading, errorMessage, updateEngagement, updateReviewSummary } = usePopupStores(
     auth.user ? `user:${auth.user.id}` : auth.authStatus,
   )
   const [activeStore, setActiveStore] = useState<PopupStore | null>(null)
@@ -88,6 +90,23 @@ function App() {
   }, [])
   const favorites = useFavorites(showToast)
   const visits = useVisits(showToast)
+  const myReviews = useMyReviews()
+
+  const reviewsChanged = useCallback((popupStoreId: number, summary: PopupStore['reviewSummary']) => {
+    updateReviewSummary(popupStoreId, summary)
+    myReviews.reload()
+  }, [myReviews, updateReviewSummary])
+
+  const removeMyReview = useCallback((item: MyReview) => {
+    if (!window.confirm(`${item.popupStore.name} 리뷰를 삭제할까요?`)) return
+    void deleteReview(item.popupStore.id, item.review.reviewId).then(() => {
+      const summary = item.popupStore.reviewSummary
+      const nextCount = Math.max(0, summary.reviewCount - 1)
+      const nextAverage = nextCount === 0 ? 0 : (summary.averageRating * summary.reviewCount - item.review.rating) / nextCount
+      reviewsChanged(item.popupStore.id, { averageRating: nextAverage, reviewCount: nextCount })
+      showToast('리뷰를 삭제했습니다.')
+    }).catch(() => showToast('리뷰를 삭제하지 못했습니다.'))
+  }, [reviewsChanged, showToast])
 
   const toggleFavorite = useCallback((store: PopupStore) => {
     if (!auth.isAuthenticated) {
@@ -313,6 +332,8 @@ function App() {
       routeSelectionFull={routePlanner.selectedStores.length >= 8} onToggleRoute={toggleSchedule}
       onToggleLike={toggleLike} isFavorited={favorites.favoriteIds.has(activeStore.id)} onToggleFavorite={toggleFavorite}
       visited={visits.visitedStoreIds.has(activeStore.id)} onConfirmVisit={confirmVisit}
+      onRequireLogin={() => setAuthModal({ open: true, mode: 'login' })} onReviewsChanged={reviewsChanged}
+      myReview={myReviews.items.find((item) => item.popupStore.id === activeStore.id)?.review}
       onViewOnMap={() => document.getElementById('explore-map')?.scrollIntoView({ behavior: 'smooth' })}
       onClose={() => setActiveStore(null)} />}
   </section>
@@ -373,6 +394,7 @@ function App() {
     <AuthModal open={authModal.open} initialMode={authModal.mode} onClose={() => setAuthModal((current) => ({ ...current, open: false }))} />
     <MyPageDrawer open={myPageOpen} user={auth.user} favorites={favorites.items} isLoading={favorites.isLoading}
       visits={visits.items} visitsLoading={visits.isLoading}
+      reviews={myReviews.items} onDeleteReview={removeMyReview}
       onClose={() => setMyPageOpen(false)} onOpenDetails={(store) => { setMyPageOpen(false); openHomeDetails(store) }}
       onRemoveFavorite={toggleFavorite} onAddToSchedule={toggleSchedule}
       onLogout={() => void auth.logout().then(() => { setMyPageOpen(false); showToast('로그아웃했습니다.') })} />
@@ -381,6 +403,8 @@ function App() {
       routeSelectionFull={routePlanner.selectedStores.length >= 8} onToggleRoute={toggleSchedule}
       onToggleLike={toggleLike} isFavorited={favorites.favoriteIds.has(homeDetailStore.id)} onToggleFavorite={toggleFavorite}
       visited={visits.visitedStoreIds.has(homeDetailStore.id)} onConfirmVisit={confirmVisit}
+      onRequireLogin={() => setAuthModal({ open: true, mode: 'login' })} onReviewsChanged={reviewsChanged}
+      myReview={myReviews.items.find((item) => item.popupStore.id === homeDetailStore.id)?.review}
       onClose={() => setHomeDetailStore(null)} onViewOnMap={() => {
         const store = homeDetailStore
         setHomeDetailStore(null)

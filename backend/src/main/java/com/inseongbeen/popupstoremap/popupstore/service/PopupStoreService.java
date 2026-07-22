@@ -26,6 +26,8 @@ import com.inseongbeen.popupstoremap.popupstore.engagement.service.PopupEngageme
 import com.inseongbeen.popupstoremap.popupstore.exception.PopupStoreNotFoundException;
 import com.inseongbeen.popupstoremap.popupstore.repository.PopupStoreRepository;
 import com.inseongbeen.popupstoremap.popupstore.repository.PopupStoreSpecification;
+import com.inseongbeen.popupstoremap.review.dto.ReviewSummaryDto;
+import com.inseongbeen.popupstoremap.review.service.PopupReviewService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -42,6 +44,7 @@ public class PopupStoreService {
 
     private final PopupStoreRepository popupStoreRepository;
     private final PopupEngagementService engagementService;
+    private final PopupReviewService reviewService;
 
     @Transactional
     public PopupStoreResponseDto create(PopupStoreRequestDto request) {
@@ -139,8 +142,11 @@ public class PopupStoreService {
                 anonymousVisitorId,
                 userId
         );
+        Map<Long, ReviewSummaryDto> reviews = reviewService.summaries(
+                stores.getContent().stream().map(PopupStore::getId).toList());
         Page<PopupStoreResponseDto> result = stores.map(store -> PopupStoreResponseDto.from(
-                store, engagement.getOrDefault(store.getId(), PopupEngagementDto.empty())
+                store, engagement.getOrDefault(store.getId(), PopupEngagementDto.empty()),
+                reviews.getOrDefault(store.getId(), ReviewSummaryDto.empty())
         ));
 
         return PageResponseDto.from(result);
@@ -194,9 +200,12 @@ public class PopupStoreService {
         Map<Long, PopupEngagementDto> engagement = engagementService.summaries(
                 stores.stream().map(PopupStore::getId).toList(), anonymousVisitorId, userId
         );
+        Map<Long, ReviewSummaryDto> reviews = reviewService.summaries(
+                stores.stream().map(PopupStore::getId).toList());
         return stores.stream()
                 .map(store -> PopupStoreResponseDto.from(
-                        store, engagement.getOrDefault(store.getId(), PopupEngagementDto.empty())
+                        store, engagement.getOrDefault(store.getId(), PopupEngagementDto.empty()),
+                        reviews.getOrDefault(store.getId(), ReviewSummaryDto.empty())
                 ))
                 .toList();
     }

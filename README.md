@@ -75,6 +75,20 @@ GET  /api/users/me/visits?page=0&size=10&from=2026-07-01&to=2026-07-31&sort=visi
 
 현재 방문 기록 삭제 기능은 제공하지 않습니다.
 
+리뷰는 로그인한 사용자가 해당 팝업의 방문 기록을 가진 경우에만 한 건 작성할 수 있습니다. 평점은
+1~5점, 내용은 10~1000자이며 본인의 리뷰만 수정·삭제할 수 있습니다. 길안내 도착으로 생성된 방문
+기록이 있으면 `길안내 방문 확인` Badge가 표시됩니다. 공개 리뷰 응답은 닉네임만 제공하고 이메일,
+내부 사용자 ID와 방문 기록 ID는 노출하지 않습니다. 평균과 리뷰 수는 리뷰 변경 트랜잭션에서 별도
+summary로 함께 갱신되어 팝업 카드마다 추가 집계 요청을 만들지 않습니다.
+
+```text
+GET    /api/popup-stores/{popupId}/reviews?sort=latest&page=0&size=10
+POST   /api/popup-stores/{popupId}/reviews
+PATCH  /api/popup-stores/{popupId}/reviews/{reviewId}
+DELETE /api/popup-stores/{popupId}/reviews/{reviewId}
+GET    /api/users/me/reviews
+```
+
 ## Frontend 실행
 
 Node.js와 npm이 필요합니다.

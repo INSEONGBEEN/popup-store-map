@@ -7,6 +7,7 @@ import com.inseongbeen.popupstoremap.popupstore.entity.PopupStore;
 import com.inseongbeen.popupstoremap.popupstore.entity.PopupStoreCategory;
 import com.inseongbeen.popupstoremap.popupstore.entity.PopupStoreStatus;
 import com.inseongbeen.popupstoremap.popupstore.engagement.dto.PopupEngagementDto;
+import com.inseongbeen.popupstoremap.review.dto.ReviewSummaryDto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -25,13 +26,19 @@ public record PopupStoreResponseDto(
         @Schema(description = "대표 이미지 URL") String imageUrl,
         @Schema(description = "등록 시각", example = "2026-07-21T22:20:00") LocalDateTime createdAt,
         @Schema(description = "수정 시각", example = "2026-07-21T22:20:00") LocalDateTime updatedAt,
-        @Schema(description = "익명 참여 지표") PopupEngagementDto engagement
+        @Schema(description = "참여 지표") PopupEngagementDto engagement,
+        @Schema(description = "리뷰 평균과 개수") ReviewSummaryDto reviewSummary
 ) {
     public static PopupStoreResponseDto from(PopupStore popupStore) {
-        return from(popupStore, PopupEngagementDto.empty());
+        return from(popupStore, PopupEngagementDto.empty(), ReviewSummaryDto.empty());
     }
 
     public static PopupStoreResponseDto from(PopupStore popupStore, PopupEngagementDto engagement) {
+        return from(popupStore, engagement, ReviewSummaryDto.empty());
+    }
+
+    public static PopupStoreResponseDto from(PopupStore popupStore, PopupEngagementDto engagement,
+                                             ReviewSummaryDto reviewSummary) {
         return new PopupStoreResponseDto(
                 popupStore.getId(),
                 popupStore.getName(),
@@ -46,7 +53,8 @@ public record PopupStoreResponseDto(
                 popupStore.getImageUrl(),
                 popupStore.getCreatedAt(),
                 popupStore.getUpdatedAt(),
-                engagement
+                engagement,
+                reviewSummary
         );
     }
 }

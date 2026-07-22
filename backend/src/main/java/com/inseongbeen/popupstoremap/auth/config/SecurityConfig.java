@@ -34,6 +34,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/refresh").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/popup-stores/*/reviews").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/api/popup-stores/*/reviews/*").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/popup-stores/*/reviews/*").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/popup-stores/**").permitAll()
                         .requestMatchers("/api/popup-stores/**", "/api/routes/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/error").permitAll()

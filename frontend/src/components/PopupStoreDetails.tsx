@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { formatMetricCount } from '../features/popupstore/popupDiscoveryUtils'
 import type { PopupStore } from '../types/popupStore'
+import { PopupReviews } from './PopupReviews'
+import type { Review } from '../api/reviews'
 
 export interface PopupStoreDetailsActions {
   popupStore: PopupStore
@@ -12,6 +14,9 @@ export interface PopupStoreDetailsActions {
   onToggleFavorite: (popupStore: PopupStore) => void
   visited: boolean
   onConfirmVisit: (popupStore: PopupStore) => void
+  onRequireLogin: () => void
+  onReviewsChanged: (popupStoreId: number, summary: PopupStore['reviewSummary']) => void
+  myReview?: Review
   onViewOnMap: () => void
   onClose: () => void
 }
@@ -35,6 +40,9 @@ export function PopupStoreDetailsContent({
   onToggleFavorite,
   visited,
   onConfirmVisit,
+  onRequireLogin,
+  onReviewsChanged,
+  myReview,
   onViewOnMap,
 }: Omit<PopupStoreDetailsActions, 'onClose'>) {
   const [tab, setTab] = useState<'info' | 'hours' | 'intro' | 'reviews'>('info')
@@ -56,6 +64,7 @@ export function PopupStoreDetailsContent({
       <span>조회 {formatMetricCount(popupStore.engagement.viewCount)}</span>
       <span>좋아요 {formatMetricCount(popupStore.engagement.likeCount)}</span>
       <span>일정 {formatMetricCount(popupStore.engagement.planAddCount)}</span>
+      <span>평점 {popupStore.reviewSummary.averageRating.toFixed(1)} · 리뷰 {popupStore.reviewSummary.reviewCount}</span>
     </div>
     <div className="details-tabs" role="tablist" aria-label="상세정보 항목">
       {([['info', '정보'], ['hours', '운영시간'], ['intro', '소개'], ['reviews', '후기']] as const).map(([value, label]) =>
@@ -67,7 +76,9 @@ export function PopupStoreDetailsContent({
         <div><dt>전체 주소</dt><dd>{popupStore.address}</dd></div></dl>}
       {tab === 'hours' && <p className="details-empty">등록된 운영시간 정보가 없습니다.</p>}
       {tab === 'intro' && <p>{popupStore.description || '등록된 팝업스토어 소개가 없습니다.'}</p>}
-      {tab === 'reviews' && <p className="details-empty">아직 등록된 후기가 없습니다.</p>}
+      {tab === 'reviews' && <PopupReviews popupStoreId={popupStore.id} initialSummary={popupStore.reviewSummary}
+        visited={visited} onRequireLogin={onRequireLogin}
+        myReview={myReview} onChanged={(summary) => onReviewsChanged(popupStore.id, summary)} />}
     </div>
     <div className="details-actions">
       <button type="button" className={`details-like${popupStore.engagement.likedByCurrentVisitor ? ' liked' : ''}`}

@@ -15,6 +15,9 @@ import com.inseongbeen.popupstoremap.visit.entity.VisitHistory;
 public interface VisitHistoryRepository extends JpaRepository<VisitHistory, Long> {
     Optional<VisitHistory> findByUserIdAndPopupStoreIdAndVisitDate(Long userId, Long popupStoreId, LocalDate visitDate);
     boolean existsByUserIdAndPopupStoreId(Long userId, Long popupStoreId);
+    Optional<VisitHistory> findTopByUserIdAndPopupStoreIdOrderByVisitedAtDesc(Long userId, Long popupStoreId);
+    boolean existsByUserIdAndPopupStoreIdAndSource(Long userId, Long popupStoreId,
+                                                   com.inseongbeen.popupstoremap.visit.entity.VisitSource source);
 
     @EntityGraph(attributePaths = "popupStore")
     @Query("""

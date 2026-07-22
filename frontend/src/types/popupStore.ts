@@ -30,6 +30,7 @@ export interface PopupStore {
   createdAt: string
   updatedAt: string
   engagement: PopupEngagement
+  reviewSummary: { averageRating: number; reviewCount: number }
 }
 
 export interface PageResponse<T> {
