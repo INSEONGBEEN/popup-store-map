@@ -4,6 +4,8 @@
 
 ### Added
 
+- 이메일 회원가입·로그인, 메모리 Access Token, 회전형 HttpOnly Refresh Token 기반 인증
+- 새로고침 인증 복원, 401 single-flight 갱신 및 접근 가능한 로그인·회원가입 Modal
 - 팝업 발견·지도·오늘 일정을 한 화면에서 연결하는 통합 홈과 검색·카테고리 탐색 UI
 - 홈 상세 Overlay, 지도 상세 Drawer 및 공통 PopupStore 상세 콘텐츠
 - 익명 세션 기반 조회수·좋아요·일정 추가 지표와 최근 참여 기반 featured 팝업 API

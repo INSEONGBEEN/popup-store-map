@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { recordPlanAdd, recordPopupView, setPopupLike } from './api/popupEngagement'
 import { IntegratedHeader } from './components/IntegratedHeader'
+import { AuthModal } from './components/AuthModal'
 import { PopupDiscovery } from './components/PopupDiscovery'
 import { HomepagePopupDetailsModal, MapPopupDetailsDrawer } from './components/PopupStoreDetails'
 import { RoutePlanner } from './components/RoutePlanner'
@@ -11,9 +12,11 @@ import { filterPopupStores } from './features/popupstore/popupDiscoveryUtils'
 import { useRoutePlanner } from './features/route/useRoutePlanner'
 import { PopupStoreMap, type GpsDisplayMode } from './map/PopupStoreMap'
 import type { PopupStore } from './types/popupStore'
+import { useAuth } from './features/auth/authContext'
 import './App.css'
 
 function App() {
+  const auth = useAuth()
   const { popupStores, featuredStores, isLoading, errorMessage, updateEngagement } = usePopupStores()
   const [activeStore, setActiveStore] = useState<PopupStore | null>(null)
   const [homeDetailStore, setHomeDetailStore] = useState<PopupStore | null>(null)
@@ -28,6 +31,7 @@ function App() {
   const [gpsMode, setGpsMode] = useState<GpsDisplayMode>('idle')
   const [guidanceRequested, setGuidanceRequested] = useState(false)
   const [guidanceStageText, setGuidanceStageText] = useState<string | null>(null)
+  const [authModal, setAuthModal] = useState<{ open: boolean; mode: 'login' | 'signup' }>({ open: false, mode: 'login' })
   const preparingRef = useRef(false)
   const guidancePreparationStartedRef = useRef(false)
   const planAddRecordedRef = useRef(new Set<number>())
@@ -281,6 +285,9 @@ function App() {
       onCategory={(value) => { setCategory(value); setDraftQuery(''); setAppliedQuery('') }}
       onHome={() => { setDraftQuery(''); setAppliedQuery(''); setActiveStore(null); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
       onOpenSchedule={() => setScheduleExpanded(true)} onOptimize={() => setScheduleExpanded(true)}
+      authStatus={auth.authStatus} user={auth.user}
+      onOpenAuth={(mode) => setAuthModal({ open: true, mode })}
+      onLogout={() => void auth.logout().then(() => showToast('로그아웃했습니다.'))}
       onToggleTheme={() => setTheme((current) => { const next = current === 'light' ? 'dark' : 'light'; window.localStorage.setItem('popup-store-map.theme', next); return next })} />}
 
     {navigationActive ? <div className="navigation-map-stage">{map}{routePlannerPanel}</div> : <>
@@ -298,6 +305,7 @@ function App() {
       {scheduleExpanded && routePlannerPanel}
     </>}
     {toastMessage && <div className="app-toast" role="status">{toastMessage}</div>}
+    <AuthModal open={authModal.open} initialMode={authModal.mode} onClose={() => setAuthModal((current) => ({ ...current, open: false }))} />
     {homeDetailStore && !navigationActive && <HomepagePopupDetailsModal popupStore={homeDetailStore}
       isRouteSelected={routePlanner.selectedStores.some(({ id }) => id === homeDetailStore.id)}
       routeSelectionFull={routePlanner.selectedStores.length >= 8} onToggleRoute={toggleSchedule}

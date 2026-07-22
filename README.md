@@ -2,7 +2,7 @@
 
 성수역, 서울숲역, 뚝섬역 주변의 팝업스토어를 OpenStreetMap 지도에서 확인하는 서비스입니다.
 현재는 팝업스토어 CRUD·검색 API, 통합 탐색 홈, 지도 마커·상세정보, 익명 참여 지표,
-최적 순서 기반 도보 경로와 실시간 GPS 안내가 구현되어 있습니다.
+최적 순서 기반 도보 경로, 실시간 GPS 안내와 기본 회원 인증이 구현되어 있습니다.
 
 > `[DEV]`로 시작하는 샘플은 실제 운영 정보가 아닌 개발·테스트용 가상 데이터입니다.
 > 주소와 좌표 역시 UI 및 검색 기능 검증을 위한 성수동 일대의 개발용 위치입니다.
@@ -20,9 +20,12 @@ popup-store-map/
 PostgreSQL의 `popup_store` 데이터베이스와 PostGIS 확장을 준비한 뒤 실행합니다.
 데이터베이스 접속 정보는 로컬 환경에 맞게 별도로 관리하고 저장소에 비밀번호를 커밋하지 마세요.
 
+JWT 서명 키는 환경변수로만 제공합니다. 32바이트 이상의 임의 값을 사용하고 저장소에 실제 값을
+커밋하지 마세요. 로컬 실행용 변수 목록은 `backend/.env.example`에 placeholder로만 제공합니다.
+
 ```bash
 cd backend
-./gradlew bootRun
+JWT_SECRET='<로컬에서 생성한 32바이트 이상의 값>' ./gradlew bootRun
 ```
 
 Swagger UI: <http://localhost:8080/swagger-ui/index.html>
@@ -31,12 +34,22 @@ Swagger UI: <http://localhost:8080/swagger-ui/index.html>
 
 ```bash
 cd backend
-./gradlew bootRun --args='--spring.profiles.active=dev'
+JWT_SECRET='<로컬에서 생성한 32바이트 이상의 값>' ./gradlew bootRun --args='--spring.profiles.active=dev'
 ```
 
 `dev` 프로필에서만 `PopupStoreDevDataInitializer`가 실행됩니다. 18개의 `[DEV]` 샘플을
 Repository로 저장하며, 재시작할 때 각 샘플 이름이 이미 존재하는지 확인해 중복 삽입을 방지합니다.
 일반 프로필과 운영 환경에서는 initializer와 개발용 CORS 설정이 활성화되지 않습니다.
+
+### 회원 인증
+
+- Access Token은 15분 동안 유효하며 Frontend 메모리에만 보관합니다.
+- Refresh Token은 10일 동안 유효하며 `HttpOnly`, `SameSite=Lax` Cookie로 전달되고 DB에는
+  SHA-256 hash만 저장됩니다. 갱신 시 기존 토큰을 폐기하고 새 토큰으로 회전합니다.
+- localhost에서는 `AUTH_COOKIE_SECURE=false`, HTTPS 운영 환경에서는
+  `AUTH_COOKIE_SECURE=true`를 지정합니다.
+- Cookie를 사용하는 refresh/logout 요청은 Origin이 전달된 경우 `AUTH_ALLOWED_ORIGINS` 목록으로
+  검사합니다. 모든 origin 허용은 사용하지 않습니다.
 
 ## Frontend 실행
 
@@ -82,7 +95,7 @@ brew install cloudflared
 
 # 터미널 1: Backend
 cd backend
-./gradlew bootRun --args='--spring.profiles.active=dev'
+JWT_SECRET='<로컬에서 생성한 32바이트 이상의 값>' ./gradlew bootRun --args='--spring.profiles.active=dev'
 
 # 터미널 2: Vite (0.0.0.0:5173 + /api proxy)
 cd frontend
@@ -360,4 +373,4 @@ npm run lint
 
 - 8개를 초과하는 대규모 방문지 휴리스틱 최적화
 - 서버 저장형 여행 계획 및 상용 수준 음성/백그라운드 내비게이션
-- JWT 인증·인가
+- 즐겨찾기·방문 기록·방문 기반 리뷰·통합 마이페이지

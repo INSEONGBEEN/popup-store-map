@@ -8,11 +8,18 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.inseongbeen.popupstoremap.popupstore.exception.PopupStoreNotFoundException;
+import com.inseongbeen.popupstoremap.auth.exception.AuthException;
 import com.inseongbeen.popupstoremap.route.exception.PedestrianRouteException;
 import com.inseongbeen.popupstoremap.route.exception.RouteErrorType;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(AuthException.class)
+    public ResponseEntity<ErrorResponse> handleAuth(AuthException exception) {
+        return ResponseEntity.status(exception.getStatus())
+                .body(new ErrorResponse(exception.getStatus().value(), exception.getMessage()));
+    }
 
     @ExceptionHandler(PopupStoreNotFoundException.class)
     public ResponseEntity<ErrorResponse> handlePopupStoreNotFound(
