@@ -49,6 +49,19 @@ export function moveSelectedStore(
   return reordered
 }
 
+export function reorderSelectedStores(
+  selectedStores: PopupStore[],
+  fromIndex: number,
+  toIndex: number,
+): PopupStore[] {
+  if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 ||
+    fromIndex >= selectedStores.length || toIndex >= selectedStores.length) return selectedStores
+  const reordered = [...selectedStores]
+  const [moved] = reordered.splice(fromIndex, 1)
+  reordered.splice(toIndex, 0, moved)
+  return reordered
+}
+
 export function routeStatusAfterSelectionChange(status: RouteStatus): RouteStatus {
   return status === 'loading' || status === 'success' || status === 'stale' ? 'stale' : 'idle'
 }

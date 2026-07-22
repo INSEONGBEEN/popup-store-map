@@ -54,7 +54,11 @@ export function createPopupStoreFeatures(stores: PopupStore[]): Feature<Point>[]
   })
 }
 
-export function markerStyleFor(activeId: number | null, selectedStoreIds: number[] = []) {
+export function markerStyleFor(
+  activeId: number | null,
+  selectedStoreIds: number[] = [],
+  navigationIds: { current: number | null; next: number | null } = { current: null, next: null },
+) {
   const selectedOrder = new Map(selectedStoreIds.map((id, index) => [id, index + 1]))
   const numberedStyles = new Map<number, Style>()
 
@@ -62,12 +66,13 @@ export function markerStyleFor(activeId: number | null, selectedStoreIds: number
     const id = Number(feature.getId())
     const order = selectedOrder.get(id)
     if (order) {
-      let style = numberedStyles.get(order)
+      let style = id === navigationIds.current ? undefined : numberedStyles.get(order)
       if (!style) {
+        const pulseRadius = id === navigationIds.current ? 14 + Math.sin(Date.now() / 160) * 1.8 : undefined
         style = new Style({
           image: new CircleStyle({
-            radius: 12,
-            fill: new Fill({ color: '#172554' }),
+            radius: pulseRadius ?? (id === navigationIds.next ? 13 : 12),
+            fill: new Fill({ color: id === navigationIds.current ? '#2563eb' : id === navigationIds.next ? '#16a34a' : '#172554' }),
             stroke: new Stroke({ color: id === activeId ? '#fbbf24' : '#ffffff', width: 3 }),
           }),
           text: new Text({
@@ -75,9 +80,9 @@ export function markerStyleFor(activeId: number | null, selectedStoreIds: number
             fill: new Fill({ color: '#ffffff' }),
             font: '700 12px sans-serif',
           }),
-          zIndex: 30,
+          zIndex: id === navigationIds.current ? 34 : id === navigationIds.next ? 33 : 30,
         })
-        numberedStyles.set(order, style)
+        if (id !== navigationIds.current) numberedStyles.set(order, style)
       }
       return style
     }

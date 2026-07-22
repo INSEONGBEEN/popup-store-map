@@ -8,6 +8,7 @@ import VectorLayer from 'ol/layer/Vector'
 import OSM from 'ol/source/OSM'
 import VectorSource from 'ol/source/Vector'
 import { fromLonLat } from 'ol/proj'
+import { defaults as defaultControls } from 'ol/control/defaults.js'
 import {
   createPopupStoreFeatures,
   isValidCoordinate,
@@ -16,8 +17,7 @@ import {
 import { createRouteFeature, routeStyles } from './popupStoreRoute'
 import {
   createCurrentLocationFeatures,
-  currentLocationAccuracyStyle,
-  currentLocationMarkerStyle,
+  currentLocationStyle,
 } from './currentLocationLayer'
 import type { GeolocationStatus } from '../features/geolocation/useCurrentLocation'
 import type { CurrentLocation, RouteCoordinate } from '../features/route/routeTypes'
@@ -26,36 +26,48 @@ import type { PopupStore } from '../types/popupStore'
 interface PopupStoreMapProps {
   popupStores: PopupStore[]
   activeStoreId: number | null
+  focusStoreId: number | null
   selectedStores: PopupStore[]
+  navigationStoreIds: { current: number | null; next: number | null }
   routeCoordinates: RouteCoordinate[] | null
   currentLocation: CurrentLocation | null
   geolocationStatus: GeolocationStatus
   geolocationError: string | null
   followMode: boolean
   recenterToken: number
-  onRequestCurrentLocation: () => void
+  gpsMode: GpsDisplayMode
+  onCycleGpsMode: () => void
   onStopTracking: () => void
   onPauseFollow: () => void
+  onNorthUp: () => void
   headingUp: boolean
+  navigationMode?: boolean
   onSelect: (popupStore: PopupStore) => void
 }
+
+export type GpsDisplayMode = 'idle' | 'located' | 'follow' | 'heading'
 
 const SEONGSU_CENTER = fromLonLat([127.0508, 37.5454])
 
 export function PopupStoreMap({
   popupStores,
   activeStoreId,
+  focusStoreId,
   selectedStores,
+  navigationStoreIds,
   routeCoordinates,
   currentLocation,
   geolocationStatus,
   geolocationError,
   followMode,
   recenterToken,
-  onRequestCurrentLocation,
+  gpsMode,
+  onCycleGpsMode,
   onStopTracking,
   onPauseFollow,
+  onNorthUp,
   headingUp,
+  navigationMode = false,
   onSelect,
 }: PopupStoreMapProps) {
   const targetRef = useRef<HTMLDivElement>(null)
@@ -63,8 +75,9 @@ export function PopupStoreMap({
   const vectorSourceRef = useRef<VectorSource | null>(null)
   const vectorLayerRef = useRef<VectorLayer | null>(null)
   const routeSourceRef = useRef<VectorSource | null>(null)
-  const locationAccuracySourceRef = useRef<VectorSource | null>(null)
-  const locationMarkerSourceRef = useRef<VectorSource | null>(null)
+  const currentLocationSourceRef = useRef<VectorSource | null>(null)
+  const previousLocationRef = useRef<CurrentLocation | null>(null)
+  const locationAnimationRef = useRef<number | null>(null)
   const onSelectRef = useRef(onSelect)
   const onPauseFollowRef = useRef(onPauseFollow)
   const locatedPopupStores = popupStores.filter(isValidCoordinate)
@@ -82,23 +95,17 @@ export function PopupStoreMap({
 
     const vectorSource = new VectorSource()
     const routeSource = new VectorSource()
-    const locationAccuracySource = new VectorSource()
-    const locationMarkerSource = new VectorSource()
+    const currentLocationSource = new VectorSource()
     const routeLayer = new VectorLayer({ source: routeSource, style: routeStyles, zIndex: 10 })
     const vectorLayer = new VectorLayer({
       source: vectorSource,
       style: markerStyleFor(null),
       zIndex: 20,
     })
-    const locationAccuracyLayer = new VectorLayer({
-      source: locationAccuracySource,
-      style: currentLocationAccuracyStyle,
+    const currentLocationLayer = new VectorLayer({
+      source: currentLocationSource,
+      style: currentLocationStyle,
       zIndex: 30,
-    })
-    const locationMarkerLayer = new VectorLayer({
-      source: locationMarkerSource,
-      style: currentLocationMarkerStyle,
-      zIndex: 40,
     })
     const map = new Map({
       target: targetRef.current,
@@ -106,9 +113,9 @@ export function PopupStoreMap({
         new TileLayer({ source: new OSM() }),
         routeLayer,
         vectorLayer,
-        locationAccuracyLayer,
-        locationMarkerLayer,
+        currentLocationLayer,
       ],
+      controls: defaultControls({ zoom: false, rotate: false }),
       view: new View({ center: SEONGSU_CENTER, zoom: 14.4 }),
     })
 
@@ -124,23 +131,22 @@ export function PopupStoreMap({
     vectorSourceRef.current = vectorSource
     vectorLayerRef.current = vectorLayer
     routeSourceRef.current = routeSource
-    locationAccuracySourceRef.current = locationAccuracySource
-    locationMarkerSourceRef.current = locationMarkerSource
+    currentLocationSourceRef.current = currentLocationSource
     mapRef.current = map
     return () => {
       unByKey(clickKey)
       interactionKeys.forEach(unByKey)
       vectorSource.clear()
       routeSource.clear()
-      locationAccuracySource.clear()
-      locationMarkerSource.clear()
+      currentLocationSource.clear()
+      if (locationAnimationRef.current !== null) cancelAnimationFrame(locationAnimationRef.current)
       map.setTarget(undefined)
       map.dispose()
       vectorSourceRef.current = null
       vectorLayerRef.current = null
       routeSourceRef.current = null
-      locationAccuracySourceRef.current = null
-      locationMarkerSourceRef.current = null
+      currentLocationSourceRef.current = null
+      previousLocationRef.current = null
       mapRef.current = null
     }
   }, [])
@@ -154,10 +160,27 @@ export function PopupStoreMap({
 
   useEffect(() => {
     vectorLayerRef.current?.setStyle(
-      markerStyleFor(activeStoreId, selectedStores.map((popupStore) => popupStore.id)),
+      markerStyleFor(activeStoreId, selectedStores.map((popupStore) => popupStore.id), navigationStoreIds),
     )
     vectorSourceRef.current?.changed()
-  }, [activeStoreId, selectedStores])
+  }, [activeStoreId, navigationStoreIds, selectedStores])
+
+  useEffect(() => {
+    if (focusStoreId == null) return
+    const map = mapRef.current
+    const feature = vectorSourceRef.current?.getFeatures()
+      .find((candidate) => (candidate.get('popupStore') as PopupStore | undefined)?.id === focusStoreId)
+    const coordinate = feature?.getGeometry()?.getExtent()
+    if (!map || !coordinate) return
+    map.getView().animate({ center: [(coordinate[0] + coordinate[2]) / 2, (coordinate[1] + coordinate[3]) / 2],
+      zoom: Math.max(map.getView().getZoom() ?? 0, 15.5), duration: 350 })
+  }, [focusStoreId])
+
+  useEffect(() => {
+    if (navigationStoreIds.current == null) return
+    const timer = window.setInterval(() => vectorSourceRef.current?.changed(), 120)
+    return () => window.clearInterval(timer)
+  }, [navigationStoreIds])
 
   useEffect(() => {
     const routeSource = routeSourceRef.current
@@ -179,17 +202,38 @@ export function PopupStoreMap({
   }, [routeCoordinates])
 
   useEffect(() => {
-    const accuracySource = locationAccuracySourceRef.current
-    const markerSource = locationMarkerSourceRef.current
+    const source = currentLocationSourceRef.current
     const map = mapRef.current
-    if (!accuracySource || !markerSource || !map) return
-    accuracySource.clear()
-    markerSource.clear()
-    if (!currentLocation) return
+    if (!source || !map) return
+    if (locationAnimationRef.current !== null) cancelAnimationFrame(locationAnimationRef.current)
+    if (!currentLocation) {
+      source.clear()
+      previousLocationRef.current = null
+      return
+    }
 
-    const { center, accuracyFeature, markerFeature } = createCurrentLocationFeatures(currentLocation)
-    accuracySource.addFeature(accuracyFeature)
-    markerSource.addFeature(markerFeature)
+    const previous = previousLocationRef.current ?? currentLocation
+    const startedAt = performance.now()
+    const duration = 360
+    const renderFrame = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / duration)
+      const eased = 1 - (1 - progress) ** 3
+      const interpolated: CurrentLocation = {
+        ...currentLocation,
+        coordinate: [
+          previous.coordinate[0] + (currentLocation.coordinate[0] - previous.coordinate[0]) * eased,
+          previous.coordinate[1] + (currentLocation.coordinate[1] - previous.coordinate[1]) * eased,
+        ],
+      }
+      const rendered = createCurrentLocationFeatures(interpolated)
+      source.clear()
+      source.addFeatures(rendered.features)
+      if (progress < 1) locationAnimationRef.current = requestAnimationFrame(renderFrame)
+      else locationAnimationRef.current = null
+    }
+    locationAnimationRef.current = requestAnimationFrame(renderFrame)
+    previousLocationRef.current = currentLocation
+    const { center } = createCurrentLocationFeatures(currentLocation)
     if (followMode) {
       const rotation = headingUp && currentLocation.headingDegrees != null &&
         (currentLocation.speedMetersPerSecond ?? 0) > 0.5
@@ -199,7 +243,8 @@ export function PopupStoreMap({
   }, [currentLocation, followMode, headingUp, recenterToken])
 
   return (
-    <div className="map-container">
+    <div className="map-container" data-route-coordinate-count={routeCoordinates?.length ?? 0}
+      data-route-visible={Boolean(routeCoordinates && routeCoordinates.length >= 2)}>
       <div ref={targetRef} className="map" aria-label="성수동 팝업스토어 지도" />
       <div className="marker-picker">
         <label htmlFor="popup-store-marker-select">키보드로 마커 선택</label>
@@ -221,21 +266,35 @@ export function PopupStoreMap({
           ))}
         </select>
       </div>
-      <div className="geolocation-control">
+      <div className={`map-fab-stack${navigationMode ? ' navigation-controls' : ''}`} aria-label="지도 컨트롤">
         <button
           type="button"
+          className={`map-fab gps-fab ${gpsMode !== 'idle' ? 'active' : ''}`}
           disabled={geolocationStatus === 'locating'}
-          onClick={onRequestCurrentLocation}
+          onClick={onCycleGpsMode}
+          aria-label={gpsModeLabel(gpsMode)}
+          title={gpsModeLabel(gpsMode)}
         >
-          {geolocationStatus === 'locating'
-            ? '위치 확인 중…'
-            : geolocationStatus === 'tracking' && !followMode ? '현재 위치로 복귀' : '현재 위치'}
+          <span aria-hidden="true">{gpsMode === 'heading' ? '➤' : gpsMode === 'follow' ? '◎' : '⌖'}</span>
         </button>
-        {geolocationStatus === 'tracking' && (
-          <button type="button" onClick={onStopTracking}>추적 종료</button>
-        )}
-        {geolocationError && <p role="alert">{geolocationError}</p>}
+        <button type="button" className="map-fab desktop-map-control" aria-label="지도 확대" title="지도 확대"
+          onClick={() => { const view = mapRef.current?.getView(); if (view) view.animate({ zoom: (view.getZoom() ?? 14) + 1, duration: 180 }) }}>+</button>
+        <button type="button" className="map-fab desktop-map-control" aria-label="지도 축소" title="지도 축소"
+          onClick={() => { const view = mapRef.current?.getView(); if (view) view.animate({ zoom: (view.getZoom() ?? 14) - 1, duration: 180 }) }}>−</button>
+        <button type="button" className="map-fab" aria-label="북쪽 고정" title="북쪽 고정"
+          onClick={() => { mapRef.current?.getView().animate({ rotation: 0, duration: 220 }); onNorthUp() }}>N</button>
+        <button type="button" className="map-fab" aria-label="지도 회전 초기화" title="지도 회전 초기화"
+          onClick={() => mapRef.current?.getView().animate({ rotation: 0, duration: 220 })}>↻</button>
+        {geolocationStatus === 'tracking' && <button type="button" className="map-fab stop-gps" onClick={onStopTracking} aria-label="GPS 추적 종료" title="GPS 추적 종료">■</button>}
       </div>
+      {geolocationError && <p className="geolocation-error" role="alert">{geolocationError}</p>}
     </div>
   )
+}
+
+function gpsModeLabel(mode: GpsDisplayMode) {
+  if (mode === 'heading') return '진행 방향 따라가기 활성화'
+  if (mode === 'follow') return '현재 위치 따라가기 활성화, 다시 누르면 진행 방향 모드'
+  if (mode === 'located') return '현재 위치 표시, 다시 누르면 따라가기'
+  return '현재 위치로 이동'
 }

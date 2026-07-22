@@ -4,6 +4,10 @@
 
 ### Added
 
+- 팝업 발견·지도·오늘 일정을 한 화면에서 연결하는 통합 홈과 검색·카테고리 탐색 UI
+- 홈 상세 Overlay, 지도 상세 Drawer 및 공통 PopupStore 상세 콘텐츠
+- 익명 세션 기반 조회수·좋아요·일정 추가 지표와 최근 참여 기반 featured 팝업 API
+- 현재 위치 Accuracy Circle, Heading Cone·Triangle 및 GPS follow/heading-follow UI
 - PopupStore keyword, category, status, operating date 검색과 페이징·정렬 API
 - Swagger/OpenAPI 기반 CRUD 및 검색 API 문서
 - dev 프로필 전용 성수동 개발 샘플 데이터 18건과 localhost CORS 설정
@@ -23,6 +27,9 @@
 
 ### Changed
 
+- 일정 추가와 경로 생성을 분리하고 `길안내 시작` 시점에만 최적화·상세 경로를 요청하도록 개선
+- Mac Wi-Fi 위치 fallback, 단일 watcher, 최근 위치 재사용 및 모바일 절대 방향 보정 강화
+- 모바일 safe-area, Header, 카드, Modal, Drawer, 일정 Dock 및 GPS FAB 반응형 레이아웃 개선
 - PopupStore에 category와 status 필드 추가
 - 테스트 환경을 인메모리 H2로 격리
 - backend/frontend 실행 및 개발 데이터 사용법을 README에 문서화

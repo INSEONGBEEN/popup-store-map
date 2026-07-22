@@ -8,6 +8,7 @@ import {
   addSelectedStore,
   moveSelectedStore,
   removeSelectedStore,
+  reorderSelectedStores,
   routeStatusAfterSelectionChange,
   type AddSelectionResult,
 } from './routeSelection'
@@ -85,6 +86,14 @@ export function useRoutePlanner(currentLocation: CurrentLocation | null) {
     invalidateRoute()
   }, [invalidateRoute, selectedStores])
 
+  const reorderStores = useCallback((fromIndex: number, toIndex: number) => {
+    const next = reorderSelectedStores(selectedStores, fromIndex, toIndex)
+    if (next === selectedStores) return
+    setSelectedStores(next)
+    setSelectionMessage(null)
+    invalidateRoute()
+  }, [invalidateRoute, selectedStores])
+
   const clearStores = useCallback(() => {
     abortControllerRef.current?.abort()
     abortControllerRef.current = null
@@ -145,6 +154,7 @@ export function useRoutePlanner(currentLocation: CurrentLocation | null) {
       if (optimizationAbortRef.current !== controller) return
       originalStoresRef.current = [...selectedStores]
       setOptimizationState({ status: 'success', result, errorMessage: null })
+      setRouteState({ status: 'success', result: result.route, errorMessage: null })
     } catch (error) {
       if (axios.isCancel(error) || optimizationAbortRef.current !== controller) return
       setOptimizationState({
@@ -174,6 +184,52 @@ export function useRoutePlanner(currentLocation: CurrentLocation | null) {
     setOptimizationState((current) => ({ ...current, status: 'success' }))
   }, [])
 
+  const prepareNavigationRoute = useCallback(async (
+    locationOverride?: CurrentLocation | null,
+    onStageChange?: (stage: 'optimizing' | 'routing') => void,
+  ) => {
+    if (originType === 'FIRST_SELECTED_STORE') {
+      onStageChange?.('routing')
+      await calculateRoute()
+      return
+    }
+    optimizationAbortRef.current?.abort()
+    const controller = new AbortController()
+    optimizationAbortRef.current = controller
+    setOptimizationState({ status: 'loading', result: null, errorMessage: null })
+    setRouteState({ status: 'loading', result: null, errorMessage: null })
+    try {
+      onStageChange?.('optimizing')
+      const routeLocation = locationOverride === undefined ? currentLocation : locationOverride
+      const origin = routeOriginCoordinate(originType, selectedStores, routeLocation)
+      const departureName = originType === 'SEONGSU_STATION' ? SEONGSU_STATION.name : '현재 위치'
+      const result = await requestRouteOptimization(origin, selectedStores, departureName, controller.signal)
+      if (optimizationAbortRef.current !== controller) return
+      originalStoresRef.current = [...selectedStores]
+      const ordered = result.orderedStoreIds
+        .map((id) => selectedStores.find((store) => store.id === id))
+        .filter((store): store is PopupStore => store != null)
+      if (ordered.length !== selectedStores.length) throw new RoutePlanError('추천 방문 순서를 적용할 수 없습니다.')
+      onStageChange?.('routing')
+      const detailedRoute = await requestPedestrianRoute(
+        buildRoutePlan(originType, ordered, routeLocation),
+        controller.signal,
+      )
+      if (optimizationAbortRef.current !== controller) return
+      const completedResult = { ...result, route: detailedRoute }
+      setSelectedStores(ordered)
+      setOptimizationState({ status: 'applied', result: completedResult, errorMessage: null })
+      setRouteState({ status: 'success', result: detailedRoute, errorMessage: null })
+    } catch (error) {
+      if (axios.isCancel(error) || optimizationAbortRef.current !== controller) return
+      const message = error instanceof Error ? error.message : '길안내 경로를 준비하지 못했습니다.'
+      setOptimizationState({ status: 'error', result: null, errorMessage: message })
+      setRouteState({ status: 'error', result: null, errorMessage: message })
+    } finally {
+      if (optimizationAbortRef.current === controller) optimizationAbortRef.current = null
+    }
+  }, [calculateRoute, currentLocation, originType, selectedStores])
+
   useEffect(() => () => {
     abortControllerRef.current?.abort()
     optimizationAbortRef.current?.abort()
@@ -188,11 +244,13 @@ export function useRoutePlanner(currentLocation: CurrentLocation | null) {
     addStore,
     removeStore,
     moveStore,
+    reorderStores,
     clearStores,
     setOriginType,
     calculateRoute,
     recommendOrder,
     applyRecommendation,
     restoreOriginalOrder,
+    prepareNavigationRoute,
   }
 }

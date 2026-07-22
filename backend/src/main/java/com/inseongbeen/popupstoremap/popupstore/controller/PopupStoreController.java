@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.inseongbeen.popupstoremap.popupstore.dto.PageResponseDto;
@@ -60,8 +61,26 @@ public class PopupStoreController {
     @Operation(summary = "팝업스토어 전체 조회", description = "등록된 모든 팝업스토어를 조회합니다.")
     @ApiResponse(responseCode = "200", description = "조회 성공")
     @GetMapping
-    public ResponseEntity<List<PopupStoreResponseDto>> findAll() {
-        return ResponseEntity.ok(popupStoreService.findAll());
+    public ResponseEntity<List<PopupStoreResponseDto>> findAll(
+            @RequestHeader(value = "X-Anonymous-Visitor-Id", required = false) String anonymousVisitorId
+    ) {
+        return ResponseEntity.ok(popupStoreService.findAll(anonymousVisitorId));
+    }
+
+    @Operation(
+            summary = "주목할 팝업스토어 조회",
+            description = "최근 30일 조회·좋아요·일정 추가 지표를 보정한 순서로 운영 중/예정 팝업을 조회합니다."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "400", description = "limit 형식 오류")
+    })
+    @GetMapping("/featured")
+    public ResponseEntity<List<PopupStoreResponseDto>> featured(
+            @RequestParam(defaultValue = "4") int limit,
+            @RequestHeader(value = "X-Anonymous-Visitor-Id", required = false) String anonymousVisitorId
+    ) {
+        return ResponseEntity.ok(popupStoreService.findFeatured(limit, anonymousVisitorId));
     }
 
     @Operation(
@@ -85,10 +104,11 @@ public class PopupStoreController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate operatingDate,
             @ParameterObject
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
-            Pageable pageable
+            Pageable pageable,
+            @RequestHeader(value = "X-Anonymous-Visitor-Id", required = false) String anonymousVisitorId
     ) {
         return ResponseEntity.ok(
-                popupStoreService.search(keyword, category, status, operatingDate, pageable)
+                popupStoreService.search(keyword, category, status, operatingDate, pageable, anonymousVisitorId)
         );
     }
 

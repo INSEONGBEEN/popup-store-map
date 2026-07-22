@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { formatDistance, formatDuration } from '../features/route/routeFormatters'
 import type { NavigationStatus } from '../features/navigation/usePedestrianNavigation'
 
@@ -7,51 +8,42 @@ interface Props {
   remainingDistanceMeters: number
   remainingDurationSeconds: number
   distanceToRouteMeters: number
+  currentStopName: string | null
   nextStopName: string | null
+  completedStops: number
+  totalStops: number
   rerouteCount: number
   errorMessage: string | null
-  canStart: boolean
-  onStart: () => void
   onPause: () => void
   onResume: () => void
   onStop: () => void
   onRetry: () => void
-  headingUp: boolean
-  onToggleHeading: () => void
-  onRecenter: () => void
 }
 
-export function NavigationPanel(props: Props) {
-  const active = props.status !== 'inactive'
+export const NavigationPanel = memo(function NavigationPanel(props: Props) {
+  const progress = props.totalStops === 0 ? 0 : Math.min(100, props.completedStops / props.totalStops * 100)
   return <section className="navigation-panel" aria-labelledby="navigation-title">
-    <h3 id="navigation-title">실시간 도보 길안내</h3>
-    {!active && <button type="button" disabled={!props.canStart} onClick={props.onStart}>길안내 시작</button>}
-    {active && <>
-      <p className="navigation-status">상태: {statusLabel(props.status)}</p>
-      <strong>{props.nextInstruction}</strong>
-      {props.nextStopName && <p>다음 방문지: {props.nextStopName}</p>}
-      <dl className="route-summary-grid">
-        <div><dt>남은 거리</dt><dd>{formatDistance(props.remainingDistanceMeters)}</dd></div>
-        <div><dt>남은 시간</dt><dd>{formatDuration(props.remainingDurationSeconds)}</dd></div>
-        <div><dt>경로와 거리</dt><dd>{formatDistance(props.distanceToRouteMeters)}</dd></div>
-      </dl>
-      {props.status === 'rerouting' && <p>도보 경로를 다시 찾는 중입니다…</p>}
-      {props.rerouteCount > 0 && <p>재탐색 {props.rerouteCount}회</p>}
-      {props.errorMessage && <p className="planner-message error" role="alert">{props.errorMessage}</p>}
-      <div className="route-actions">
-        {props.status === 'paused'
-          ? <button type="button" onClick={props.onResume}>계속 안내</button>
-          : <button type="button" onClick={props.onPause}>일시정지</button>}
-        {props.status === 'error' && <button type="button" onClick={props.onRetry}>재탐색</button>}
-        <button type="button" onClick={props.onRecenter}>지도 중앙 정렬</button>
-        <button type="button" onClick={props.onToggleHeading}>{props.headingUp ? '북쪽 고정' : '진행 방향 보기'}</button>
-        <button type="button" onClick={props.onStop}>길안내 종료</button>
-      </div>
-    </>}
+    <div className="navigation-topline"><span className="live-dot" /><span>{statusLabel(props.status)}</span><strong>{props.completedStops} / {props.totalStops} 완료</strong></div>
+    <h3 id="navigation-title">{props.nextInstruction}</h3>
+    <div className="navigation-progress" aria-label={`방문 진행률 ${Math.round(progress)}%`}><span style={{ width: `${progress}%` }} /></div>
+    <dl className="navigation-metrics">
+      <div><dt>남은 거리</dt><dd>{formatDistance(props.remainingDistanceMeters)}</dd></div>
+      <div><dt>도착 예정</dt><dd>{formatDuration(props.remainingDurationSeconds)}</dd></div>
+    </dl>
+    <div className="waypoint-flow"><p><span>현재</span><strong>{props.currentStopName ?? '출발지'}</strong></p><b>→</b><p><span>다음</span><strong>{props.nextStopName ?? '마지막 목적지'}</strong></p></div>
+    {props.status === 'rerouting' && <p className="planner-message">경로를 다시 찾는 중입니다…</p>}
+    {props.distanceToRouteMeters > 35 && <p className="planner-message stale">경로에서 벗어났습니다.</p>}
+    {props.rerouteCount > 0 && <p className="planner-message">자동 재탐색 {props.rerouteCount}회</p>}
+    {props.errorMessage && <p className="planner-message error" role="alert">{props.errorMessage}</p>}
+    <div className="navigation-actions">
+      {props.status === 'paused' ? <button type="button" onClick={props.onResume}>계속</button> : <button type="button" onClick={props.onPause}>일시정지</button>}
+      {props.status === 'error' && <button type="button" onClick={props.onRetry}>재탐색</button>}
+      <button type="button" className="stop-navigation" onClick={props.onStop}>종료</button>
+    </div>
   </section>
-}
+})
 
 function statusLabel(status: NavigationStatus) {
-  return ({ inactive: '대기', starting: '시작 중', navigating: '안내 중', rerouting: '재탐색 중',
-    'arrived-at-waypoint': '방문지 도착', completed: '모든 방문지 도착', paused: '일시정지', error: '오류' })[status]
+  return ({ inactive: '대기', starting: '시작 중', navigating: '도보 안내 중', rerouting: '재탐색 중',
+    'arrived-at-waypoint': '방문지 도착', completed: '경로 완료', paused: '일시정지', error: '안내 오류' })[status]
 }

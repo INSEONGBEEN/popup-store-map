@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import com.inseongbeen.popupstoremap.popupstore.entity.PopupStore;
 import com.inseongbeen.popupstoremap.popupstore.entity.PopupStoreCategory;
 import com.inseongbeen.popupstoremap.popupstore.entity.PopupStoreStatus;
+import com.inseongbeen.popupstoremap.popupstore.engagement.dto.PopupEngagementDto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -23,9 +24,14 @@ public record PopupStoreResponseDto(
         @Schema(description = "팝업스토어 설명") String description,
         @Schema(description = "대표 이미지 URL") String imageUrl,
         @Schema(description = "등록 시각", example = "2026-07-21T22:20:00") LocalDateTime createdAt,
-        @Schema(description = "수정 시각", example = "2026-07-21T22:20:00") LocalDateTime updatedAt
+        @Schema(description = "수정 시각", example = "2026-07-21T22:20:00") LocalDateTime updatedAt,
+        @Schema(description = "익명 참여 지표") PopupEngagementDto engagement
 ) {
     public static PopupStoreResponseDto from(PopupStore popupStore) {
+        return from(popupStore, PopupEngagementDto.empty());
+    }
+
+    public static PopupStoreResponseDto from(PopupStore popupStore, PopupEngagementDto engagement) {
         return new PopupStoreResponseDto(
                 popupStore.getId(),
                 popupStore.getName(),
@@ -39,7 +45,8 @@ public record PopupStoreResponseDto(
                 popupStore.getDescription(),
                 popupStore.getImageUrl(),
                 popupStore.getCreatedAt(),
-                popupStore.getUpdatedAt()
+                popupStore.getUpdatedAt(),
+                engagement
         );
     }
 }

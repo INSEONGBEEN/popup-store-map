@@ -2,6 +2,8 @@ package com.inseongbeen.popupstoremap.popupstore.controller;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -11,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import java.util.List;
 
 import com.inseongbeen.popupstoremap.common.exception.GlobalExceptionHandler;
 import com.inseongbeen.popupstoremap.popupstore.service.PopupStoreService;
@@ -48,5 +51,18 @@ class PopupStoreSearchControllerTests {
                 .andExpect(jsonPath("$.message").value("Invalid value for parameter: operatingDate"));
 
         verifyNoInteractions(popupStoreService);
+    }
+
+    @Test
+    void featuredEndpointUsesOneRankedServiceRequest() throws Exception {
+        when(popupStoreService.findFeatured(6, "visitor-a")).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/popup-stores/featured")
+                        .param("limit", "6")
+                        .header("X-Anonymous-Visitor-Id", "visitor-a"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+
+        verify(popupStoreService).findFeatured(6, "visitor-a");
     }
 }

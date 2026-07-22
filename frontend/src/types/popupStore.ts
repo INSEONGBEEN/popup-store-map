@@ -8,6 +8,13 @@ export type PopupStoreCategory =
 
 export type PopupStoreStatus = 'UPCOMING' | 'OPEN' | 'CLOSED'
 
+export interface PopupEngagement {
+  viewCount: number
+  likeCount: number
+  planAddCount: number
+  likedByCurrentVisitor: boolean
+}
+
 export interface PopupStore {
   id: number
   name: string
@@ -22,6 +29,7 @@ export interface PopupStore {
   imageUrl: string | null
   createdAt: string
   updatedAt: string
+  engagement: PopupEngagement
 }
 
 export interface PageResponse<T> {

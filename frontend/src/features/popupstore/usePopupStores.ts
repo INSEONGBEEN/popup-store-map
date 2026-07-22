@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'react'
 import axios from 'axios'
-import { fetchPopupStores } from '../../api/popupStores'
-import type { PopupStore } from '../../types/popupStore'
+import { fetchFeaturedPopupStores, fetchPopupStores } from '../../api/popupStores'
+import type { PopupEngagement, PopupStore } from '../../types/popupStore'
 
 interface PopupStoreQueryState {
   popupStores: PopupStore[]
+  featuredStores: PopupStore[]
   isLoading: boolean
   errorMessage: string | null
 }
 
-export function usePopupStores(): PopupStoreQueryState {
+export function usePopupStores(): PopupStoreQueryState & {
+  updateEngagement: (popupStoreId: number, engagement: PopupEngagement) => void
+} {
   const [state, setState] = useState<PopupStoreQueryState>({
     popupStores: [],
+    featuredStores: [],
     isLoading: true,
     errorMessage: null,
   })
@@ -21,12 +25,16 @@ export function usePopupStores(): PopupStoreQueryState {
 
     async function loadPopupStores() {
       try {
-        const popupStores = await fetchPopupStores(controller.signal)
-        setState({ popupStores, isLoading: false, errorMessage: null })
+        const [popupStores, featuredStores] = await Promise.all([
+          fetchPopupStores(controller.signal),
+          fetchFeaturedPopupStores(controller.signal),
+        ])
+        setState({ popupStores, featuredStores, isLoading: false, errorMessage: null })
       } catch (error) {
         if (axios.isCancel(error)) return
         setState({
           popupStores: [],
+          featuredStores: [],
           isLoading: false,
           errorMessage: '팝업스토어 정보를 불러오지 못했습니다. 백엔드 실행 상태를 확인해 주세요.',
         })
@@ -37,5 +45,15 @@ export function usePopupStores(): PopupStoreQueryState {
     return () => controller.abort()
   }, [])
 
-  return state
+  const updateEngagement = (popupStoreId: number, engagement: PopupEngagement) => {
+    setState((current) => ({
+      ...current,
+      popupStores: current.popupStores.map((store) =>
+        store.id === popupStoreId ? { ...store, engagement } : store),
+      featuredStores: current.featuredStores.map((store) =>
+        store.id === popupStoreId ? { ...store, engagement } : store),
+    }))
+  }
+
+  return { ...state, updateEngagement }
 }

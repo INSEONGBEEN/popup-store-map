@@ -5,6 +5,7 @@ import {
   addSelectedStore,
   MAX_ROUTE_STORES,
   moveSelectedStore,
+  reorderSelectedStores,
   removeSelectedStore,
   routeStatusAfterSelectionChange,
 } from './routeSelection'
@@ -52,4 +53,10 @@ test('계산된 경로는 선택 변경 시 stale 상태가 된다', () => {
   assert.equal(routeStatusAfterSelectionChange('success'), 'stale')
   assert.equal(routeStatusAfterSelectionChange('loading'), 'stale')
   assert.equal(routeStatusAfterSelectionChange('idle'), 'idle')
+})
+
+test('드래그한 방문지를 대상 index로 재정렬한다', () => {
+  const selected = [store(1), store(2), store(3)]
+  assert.deepEqual(reorderSelectedStores(selected, 0, 2).map(({ id }) => id), [2, 3, 1])
+  assert.strictEqual(reorderSelectedStores(selected, 1, 1), selected)
 })
