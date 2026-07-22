@@ -10,6 +10,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,6 +36,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import com.inseongbeen.popupstoremap.auth.security.CurrentUser;
 
 @Tag(name = "Popup Store", description = "팝업스토어 CRUD API")
 @RestController
@@ -43,6 +45,7 @@ import lombok.RequiredArgsConstructor;
 public class PopupStoreController {
 
     private final PopupStoreService popupStoreService;
+    private final CurrentUser currentUser;
 
     @Operation(summary = "팝업스토어 등록", description = "새로운 팝업스토어 정보를 등록합니다.")
     @ApiResponses({
@@ -62,9 +65,10 @@ public class PopupStoreController {
     @ApiResponse(responseCode = "200", description = "조회 성공")
     @GetMapping
     public ResponseEntity<List<PopupStoreResponseDto>> findAll(
-            @RequestHeader(value = "X-Anonymous-Visitor-Id", required = false) String anonymousVisitorId
+            @RequestHeader(value = "X-Anonymous-Visitor-Id", required = false) String anonymousVisitorId,
+            Authentication authentication
     ) {
-        return ResponseEntity.ok(popupStoreService.findAll(anonymousVisitorId));
+        return ResponseEntity.ok(popupStoreService.findAll(anonymousVisitorId, userId(authentication)));
     }
 
     @Operation(
@@ -78,9 +82,10 @@ public class PopupStoreController {
     @GetMapping("/featured")
     public ResponseEntity<List<PopupStoreResponseDto>> featured(
             @RequestParam(defaultValue = "4") int limit,
-            @RequestHeader(value = "X-Anonymous-Visitor-Id", required = false) String anonymousVisitorId
+            @RequestHeader(value = "X-Anonymous-Visitor-Id", required = false) String anonymousVisitorId,
+            Authentication authentication
     ) {
-        return ResponseEntity.ok(popupStoreService.findFeatured(limit, anonymousVisitorId));
+        return ResponseEntity.ok(popupStoreService.findFeatured(limit, anonymousVisitorId, userId(authentication)));
     }
 
     @Operation(
@@ -105,10 +110,12 @@ public class PopupStoreController {
             @ParameterObject
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC)
             Pageable pageable,
-            @RequestHeader(value = "X-Anonymous-Visitor-Id", required = false) String anonymousVisitorId
+            @RequestHeader(value = "X-Anonymous-Visitor-Id", required = false) String anonymousVisitorId,
+            Authentication authentication
     ) {
         return ResponseEntity.ok(
-                popupStoreService.search(keyword, category, status, operatingDate, pageable, anonymousVisitorId)
+                popupStoreService.search(keyword, category, status, operatingDate, pageable, anonymousVisitorId,
+                        userId(authentication))
         );
     }
 
@@ -149,5 +156,9 @@ public class PopupStoreController {
     ) {
         popupStoreService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private Long userId(Authentication authentication) {
+        return currentUser.optional(authentication).map(user -> user.getId()).orElse(null);
     }
 }

@@ -1,6 +1,7 @@
 package com.inseongbeen.popupstoremap.popupstore.engagement.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,6 +19,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import com.inseongbeen.popupstoremap.auth.security.CurrentUser;
 
 @Tag(name = "Popup Engagement", description = "팝업스토어 익명 참여 지표 API")
 @RestController
@@ -26,6 +28,7 @@ import lombok.RequiredArgsConstructor;
 public class PopupEngagementController {
 
     private final PopupEngagementService engagementService;
+    private final CurrentUser currentUser;
 
     @Operation(summary = "상세 조회 기록", description = "동일 세션의 동일 팝업 상세 조회는 한 번만 집계합니다.")
     @PostMapping("/view")
@@ -49,17 +52,21 @@ public class PopupEngagementController {
     @PutMapping("/like")
     public ResponseEntity<PopupEngagementDto> like(
             @PathVariable Long popupStoreId,
-            @Valid @RequestBody LikeRequestDto request
+            @Valid @RequestBody LikeRequestDto request,
+            Authentication authentication
     ) {
-        return ResponseEntity.ok(engagementService.like(popupStoreId, request));
+        Long userId = currentUser.optional(authentication).map(user -> user.getId()).orElse(null);
+        return ResponseEntity.ok(engagementService.like(popupStoreId, request, userId));
     }
 
     @Operation(summary = "좋아요 취소", description = "이미 취소된 좋아요도 안전하게 처리합니다.")
     @DeleteMapping("/like")
     public ResponseEntity<PopupEngagementDto> unlike(
             @PathVariable Long popupStoreId,
-            @Valid @RequestBody LikeRequestDto request
+            @Valid @RequestBody LikeRequestDto request,
+            Authentication authentication
     ) {
-        return ResponseEntity.ok(engagementService.unlike(popupStoreId, request));
+        Long userId = currentUser.optional(authentication).map(user -> user.getId()).orElse(null);
+        return ResponseEntity.ok(engagementService.unlike(popupStoreId, request, userId));
     }
 }

@@ -63,10 +63,20 @@ public class PopupEngagementService {
 
     @Transactional
     public PopupEngagementDto like(Long popupStoreId, LikeRequestDto request) {
+        return like(popupStoreId, request, null);
+    }
+
+    @Transactional
+    public PopupEngagementDto like(Long popupStoreId, LikeRequestDto request, Long userId) {
         lockPopupStore(popupStoreId);
         PopupEngagementSummary summary = getOrCreateSummary(popupStoreId);
-        if (!likeRepository.existsByPopupStoreIdAndAnonymousVisitorId(popupStoreId, request.anonymousVisitorId())) {
-            likeRepository.save(new PopupLike(popupStoreId, request.anonymousVisitorId()));
+        boolean exists = userId == null
+                ? likeRepository.existsByPopupStoreIdAndAnonymousVisitorId(popupStoreId, request.anonymousVisitorId())
+                : likeRepository.existsByPopupStoreIdAndUserId(popupStoreId, userId);
+        if (!exists) {
+            likeRepository.save(userId == null
+                    ? new PopupLike(popupStoreId, request.anonymousVisitorId())
+                    : PopupLike.forUser(popupStoreId, userId));
             summary.incrementLikeCount();
         }
         return PopupEngagementDto.from(summary, true);
@@ -74,9 +84,16 @@ public class PopupEngagementService {
 
     @Transactional
     public PopupEngagementDto unlike(Long popupStoreId, LikeRequestDto request) {
+        return unlike(popupStoreId, request, null);
+    }
+
+    @Transactional
+    public PopupEngagementDto unlike(Long popupStoreId, LikeRequestDto request, Long userId) {
         lockPopupStore(popupStoreId);
         PopupEngagementSummary summary = getOrCreateSummary(popupStoreId);
-        likeRepository.findByPopupStoreIdAndAnonymousVisitorId(popupStoreId, request.anonymousVisitorId())
+        (userId == null
+                ? likeRepository.findByPopupStoreIdAndAnonymousVisitorId(popupStoreId, request.anonymousVisitorId())
+                : likeRepository.findByPopupStoreIdAndUserId(popupStoreId, userId))
                 .ifPresent(like -> {
                     likeRepository.delete(like);
                     summary.decrementLikeCount();
@@ -84,16 +101,38 @@ public class PopupEngagementService {
         return PopupEngagementDto.from(summary, false);
     }
 
+    @Transactional
+    public void mergeAnonymousLikes(Long userId, String anonymousVisitorId) {
+        if (anonymousVisitorId == null || anonymousVisitorId.isBlank()) return;
+        for (PopupLike anonymousLike : likeRepository.findAllByAnonymousVisitorId(anonymousVisitorId)) {
+            if (!likeRepository.existsByPopupStoreIdAndUserId(anonymousLike.getPopupStoreId(), userId)) {
+                likeRepository.save(PopupLike.forUser(anonymousLike.getPopupStoreId(), userId));
+            }
+            likeRepository.delete(anonymousLike);
+        }
+    }
+
     public Map<Long, PopupEngagementDto> summaries(
             Collection<Long> popupStoreIds,
             String anonymousVisitorId
+    ) {
+        return summaries(popupStoreIds, anonymousVisitorId, null);
+    }
+
+    public Map<Long, PopupEngagementDto> summaries(
+            Collection<Long> popupStoreIds,
+            String anonymousVisitorId,
+            Long userId
     ) {
         if (popupStoreIds.isEmpty()) return Map.of();
         Map<Long, PopupEngagementSummary> summaries = new HashMap<>();
         summaryRepository.findAllByPopupStoreIdIn(popupStoreIds)
                 .forEach(summary -> summaries.put(summary.getPopupStoreId(), summary));
         Set<Long> likedIds = new HashSet<>();
-        if (anonymousVisitorId != null && !anonymousVisitorId.isBlank()) {
+        if (userId != null) {
+            likeRepository.findAllByPopupStoreIdInAndUserId(popupStoreIds, userId)
+                    .forEach(like -> likedIds.add(like.getPopupStoreId()));
+        } else if (anonymousVisitorId != null && !anonymousVisitorId.isBlank()) {
             likeRepository.findAllByPopupStoreIdInAndAnonymousVisitorId(popupStoreIds, anonymousVisitorId)
                     .forEach(like -> likedIds.add(like.getPopupStoreId()));
         }

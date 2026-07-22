@@ -66,8 +66,12 @@ public class PopupStoreService {
     }
 
     public List<PopupStoreResponseDto> findAll(String anonymousVisitorId) {
+        return findAll(anonymousVisitorId, null);
+    }
+
+    public List<PopupStoreResponseDto> findAll(String anonymousVisitorId, Long userId) {
         List<PopupStore> stores = popupStoreRepository.findAll();
-        return mapWithEngagement(stores, anonymousVisitorId);
+        return mapWithEngagement(stores, anonymousVisitorId, userId);
     }
 
     public PopupStoreResponseDto findById(Long id) {
@@ -75,6 +79,10 @@ public class PopupStoreService {
     }
 
     public List<PopupStoreResponseDto> findFeatured(int requestedLimit, String anonymousVisitorId) {
+        return findFeatured(requestedLimit, anonymousVisitorId, null);
+    }
+
+    public List<PopupStoreResponseDto> findFeatured(int requestedLimit, String anonymousVisitorId, Long userId) {
         int limit = Math.max(1, Math.min(requestedLimit, 20));
         List<PopupStore> candidates = popupStoreRepository.findAllByStatusIn(
                 List.of(PopupStoreStatus.OPEN, PopupStoreStatus.UPCOMING));
@@ -99,7 +107,7 @@ public class PopupStoreService {
                 .thenComparingInt(store -> store.getStatus() == PopupStoreStatus.OPEN ? 0 : 1)
                 .thenComparing(PopupStore::getId, Comparator.reverseOrder());
         List<PopupStore> featured = candidates.stream().sorted(ranking).limit(limit).toList();
-        return mapWithEngagement(featured, anonymousVisitorId);
+        return mapWithEngagement(featured, anonymousVisitorId, userId);
     }
 
     public PageResponseDto<PopupStoreResponseDto> search(
@@ -109,7 +117,33 @@ public class PopupStoreService {
             LocalDate operatingDate,
             Pageable pageable
     ) {
-        return search(keyword, category, status, operatingDate, pageable, null);
+        return search(keyword, category, status, operatingDate, pageable, null, null);
+    }
+
+    public PageResponseDto<PopupStoreResponseDto> search(
+            String keyword,
+            PopupStoreCategory category,
+            PopupStoreStatus status,
+            LocalDate operatingDate,
+            Pageable pageable,
+            String anonymousVisitorId,
+            Long userId
+    ) {
+        Pageable normalizedPageable = normalizePageable(pageable);
+        Page<PopupStore> stores = popupStoreRepository.findAll(
+                PopupStoreSpecification.search(keyword, category, status, operatingDate),
+                normalizedPageable
+        );
+        Map<Long, PopupEngagementDto> engagement = engagementService.summaries(
+                stores.getContent().stream().map(PopupStore::getId).toList(),
+                anonymousVisitorId,
+                userId
+        );
+        Page<PopupStoreResponseDto> result = stores.map(store -> PopupStoreResponseDto.from(
+                store, engagement.getOrDefault(store.getId(), PopupEngagementDto.empty())
+        ));
+
+        return PageResponseDto.from(result);
     }
 
     public PageResponseDto<PopupStoreResponseDto> search(
@@ -120,20 +154,7 @@ public class PopupStoreService {
             Pageable pageable,
             String anonymousVisitorId
     ) {
-        Pageable normalizedPageable = normalizePageable(pageable);
-        Page<PopupStore> stores = popupStoreRepository.findAll(
-                PopupStoreSpecification.search(keyword, category, status, operatingDate),
-                normalizedPageable
-        );
-        Map<Long, PopupEngagementDto> engagement = engagementService.summaries(
-                stores.getContent().stream().map(PopupStore::getId).toList(),
-                anonymousVisitorId
-        );
-        Page<PopupStoreResponseDto> result = stores.map(store -> PopupStoreResponseDto.from(
-                store, engagement.getOrDefault(store.getId(), PopupEngagementDto.empty())
-        ));
-
-        return PageResponseDto.from(result);
+        return search(keyword, category, status, operatingDate, pageable, anonymousVisitorId, null);
     }
 
     @Transactional
@@ -167,10 +188,11 @@ public class PopupStoreService {
 
     private List<PopupStoreResponseDto> mapWithEngagement(
             List<PopupStore> stores,
-            String anonymousVisitorId
+            String anonymousVisitorId,
+            Long userId
     ) {
         Map<Long, PopupEngagementDto> engagement = engagementService.summaries(
-                stores.stream().map(PopupStore::getId).toList(), anonymousVisitorId
+                stores.stream().map(PopupStore::getId).toList(), anonymousVisitorId, userId
         );
         return stores.stream()
                 .map(store -> PopupStoreResponseDto.from(

@@ -15,6 +15,8 @@ interface Props {
   onOpenMapDetails: (store: PopupStore) => void
   onAddToSchedule: (store: PopupStore) => void
   onToggleLike: (store: PopupStore) => void
+  favoriteIds: Set<number>
+  onToggleFavorite: (store: PopupStore) => void
   onHighlight: (store: PopupStore | null) => void
 }
 
@@ -36,6 +38,8 @@ export const PopupDiscovery = memo(function PopupDiscovery(props: Props) {
     onOpenDetails: props.onOpenDetails,
     onAddToSchedule: props.onAddToSchedule,
     onToggleLike: props.onToggleLike,
+    favoriteIds: props.favoriteIds,
+    onToggleFavorite: props.onToggleFavorite,
     onHighlight: props.onHighlight,
   }
   const mapCardProps = { ...cardProps, onOpenDetails: props.onOpenMapDetails }
@@ -85,6 +89,8 @@ interface CardActions {
   onOpenDetails: (store: PopupStore) => void
   onAddToSchedule: (store: PopupStore) => void
   onToggleLike: (store: PopupStore) => void
+  favoriteIds: Set<number>
+  onToggleFavorite: (store: PopupStore) => void
   onHighlight: (store: PopupStore | null) => void
 }
 
@@ -101,7 +107,7 @@ function PopupSection({ id, title, subtitle, stores, layout, ...actions }: CardA
 }
 
 function PopupCard({ store, index, compact = false, selectedStores, activeStoreId, onOpenDetails,
-  onAddToSchedule, onToggleLike, onHighlight }: CardActions & { store: PopupStore; index: number; compact?: boolean }) {
+  onAddToSchedule, onToggleLike, favoriteIds, onToggleFavorite, onHighlight }: CardActions & { store: PopupStore; index: number; compact?: boolean }) {
   const selectedIndex = selectedStores.findIndex(({ id }) => id === store.id)
   const selected = selectedIndex >= 0
   return <article className={`popup-service-card category-${store.category?.toLowerCase() ?? 'etc'}${compact ? ' compact' : ''}${selected ? ' selected' : ''}${activeStoreId === store.id ? ' highlighted' : ''}`}
@@ -122,6 +128,12 @@ function PopupCard({ store, index, compact = false, selectedStores, activeStoreI
         aria-label={`${store.name} ${store.engagement.likedByCurrentVisitor ? '좋아요 취소' : '좋아요'}`}
         title={store.engagement.likedByCurrentVisitor ? '좋아요 취소' : '좋아요'}
         onClick={(event) => { event.stopPropagation(); onToggleLike(store) }}>♥ {formatMetricCount(store.engagement.likeCount)}</button>
+      <button type="button" className={`favorite-button${favoriteIds.has(store.id) ? ' favorited' : ''}`}
+        aria-label={`${store.name} ${favoriteIds.has(store.id) ? '즐겨찾기 해제' : '즐겨찾기'}`}
+        title={favoriteIds.has(store.id) ? '즐겨찾기 해제' : '즐겨찾기'}
+        onClick={(event) => { event.preventDefault(); event.stopPropagation(); onToggleFavorite(store) }}>
+        {favoriteIds.has(store.id) ? '🔖' : '♧'}
+      </button>
       <EngagementMetric label="오늘 일정 담기" icon="⌖" value={store.engagement.planAddCount} />
       <button type="button" className={`schedule-add${selected ? ' selected' : ''}`}
         onClick={(event) => { event.preventDefault(); event.stopPropagation(); onAddToSchedule(store) }}

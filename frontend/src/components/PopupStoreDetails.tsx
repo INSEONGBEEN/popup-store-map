@@ -8,6 +8,8 @@ export interface PopupStoreDetailsActions {
   routeSelectionFull: boolean
   onToggleRoute: (popupStore: PopupStore) => void
   onToggleLike: (popupStore: PopupStore) => void
+  isFavorited: boolean
+  onToggleFavorite: (popupStore: PopupStore) => void
   onViewOnMap: () => void
   onClose: () => void
 }
@@ -27,6 +29,8 @@ export function PopupStoreDetailsContent({
   routeSelectionFull,
   onToggleRoute,
   onToggleLike,
+  isFavorited,
+  onToggleFavorite,
   onViewOnMap,
 }: Omit<PopupStoreDetailsActions, 'onClose'>) {
   const [tab, setTab] = useState<'info' | 'hours' | 'intro' | 'reviews'>('info')
@@ -65,6 +69,9 @@ export function PopupStoreDetailsContent({
       <button type="button" className={`details-like${popupStore.engagement.likedByCurrentVisitor ? ' liked' : ''}`}
         aria-label={`${popupStore.name} ${popupStore.engagement.likedByCurrentVisitor ? '좋아요 취소' : '좋아요'}`}
         onClick={() => onToggleLike(popupStore)}>{popupStore.engagement.likedByCurrentVisitor ? '♥ 좋아요 취소' : '♡ 좋아요'}</button>
+      <button type="button" className={`details-favorite${isFavorited ? ' favorited' : ''}`}
+        aria-label={`${popupStore.name} ${isFavorited ? '즐겨찾기 해제' : '즐겨찾기'}`}
+        onClick={() => onToggleFavorite(popupStore)}>{isFavorited ? '🔖 저장됨' : '♧ 즐겨찾기'}</button>
       <button type="button" onClick={onViewOnMap}>지도에서 위치 보기</button>
       <button type="button" className="add-route-button" disabled={!isRouteSelected && routeSelectionFull}
         onClick={() => onToggleRoute(popupStore)}>{isRouteSelected ? '오늘 일정에서 제거' : '오늘 일정에 추가'}</button>

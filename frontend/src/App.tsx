@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { recordPlanAdd, recordPopupView, setPopupLike } from './api/popupEngagement'
 import { IntegratedHeader } from './components/IntegratedHeader'
 import { AuthModal } from './components/AuthModal'
+import { MyPageDrawer } from './components/MyPageDrawer'
 import { PopupDiscovery } from './components/PopupDiscovery'
 import { HomepagePopupDetailsModal, MapPopupDetailsDrawer } from './components/PopupStoreDetails'
 import { RoutePlanner } from './components/RoutePlanner'
@@ -13,11 +14,14 @@ import { useRoutePlanner } from './features/route/useRoutePlanner'
 import { PopupStoreMap, type GpsDisplayMode } from './map/PopupStoreMap'
 import type { PopupStore } from './types/popupStore'
 import { useAuth } from './features/auth/authContext'
+import { useFavorites } from './features/favorites/useFavorites'
 import './App.css'
 
 function App() {
   const auth = useAuth()
-  const { popupStores, featuredStores, isLoading, errorMessage, updateEngagement } = usePopupStores()
+  const { popupStores, featuredStores, isLoading, errorMessage, updateEngagement } = usePopupStores(
+    auth.user ? `user:${auth.user.id}` : auth.authStatus,
+  )
   const [activeStore, setActiveStore] = useState<PopupStore | null>(null)
   const [homeDetailStore, setHomeDetailStore] = useState<PopupStore | null>(null)
   const [highlightedStore, setHighlightedStore] = useState<PopupStore | null>(null)
@@ -32,9 +36,11 @@ function App() {
   const [guidanceRequested, setGuidanceRequested] = useState(false)
   const [guidanceStageText, setGuidanceStageText] = useState<string | null>(null)
   const [authModal, setAuthModal] = useState<{ open: boolean; mode: 'login' | 'signup' }>({ open: false, mode: 'login' })
+  const [myPageOpen, setMyPageOpen] = useState(false)
   const preparingRef = useRef(false)
   const guidancePreparationStartedRef = useRef(false)
   const planAddRecordedRef = useRef(new Set<number>())
+  const pendingFavoriteRef = useRef<number | null>(null)
   const initialLocateCenteredRef = useRef(false)
   const locatePauseTimerRef = useRef<number | null>(null)
   const geolocation = useCurrentLocation()
@@ -77,6 +83,25 @@ function App() {
     setToastMessage(message)
     window.setTimeout(() => setToastMessage((current) => current === message ? null : current), 2200)
   }, [])
+  const favorites = useFavorites(showToast)
+
+  const toggleFavorite = useCallback((store: PopupStore) => {
+    if (!auth.isAuthenticated) {
+      pendingFavoriteRef.current = store.id
+      setAuthModal({ open: true, mode: 'login' })
+      return
+    }
+    void favorites.toggle(store).then((favorited) =>
+      showToast(favorited ? '즐겨찾기에 저장했습니다.' : '즐겨찾기에서 해제했습니다.')).catch(() => undefined)
+  }, [auth.isAuthenticated, favorites, showToast])
+
+  useEffect(() => {
+    if (!auth.isAuthenticated || pendingFavoriteRef.current == null) return
+    const popupStoreId = pendingFavoriteRef.current
+    pendingFavoriteRef.current = null
+    const store = popupStores.find(({ id }) => id === popupStoreId)
+    if (store) void favorites.toggle(store).then(() => showToast('로그인 후 즐겨찾기에 저장했습니다.')).catch(() => undefined)
+  }, [auth.isAuthenticated, favorites, popupStores, showToast])
 
   const recordDetailsView = useCallback((store: PopupStore) => {
     void recordPopupView(store.id).then((engagement) => updateEngagement(store.id, engagement)).catch(() => undefined)
@@ -250,7 +275,8 @@ function App() {
     {errorMessage && <div className="state-card error">{errorMessage}</div>}
     {activeStore && !navigationActive && <MapPopupDetailsDrawer popupStore={activeStore} isRouteSelected={activeStoreIsSelected}
       routeSelectionFull={routePlanner.selectedStores.length >= 8} onToggleRoute={toggleSchedule}
-      onToggleLike={toggleLike} onViewOnMap={() => document.getElementById('explore-map')?.scrollIntoView({ behavior: 'smooth' })}
+      onToggleLike={toggleLike} isFavorited={favorites.favoriteIds.has(activeStore.id)} onToggleFavorite={toggleFavorite}
+      onViewOnMap={() => document.getElementById('explore-map')?.scrollIntoView({ behavior: 'smooth' })}
       onClose={() => setActiveStore(null)} />}
   </section>
 
@@ -287,6 +313,7 @@ function App() {
       onOpenSchedule={() => setScheduleExpanded(true)} onOptimize={() => setScheduleExpanded(true)}
       authStatus={auth.authStatus} user={auth.user}
       onOpenAuth={(mode) => setAuthModal({ open: true, mode })}
+      onOpenMyPage={() => setMyPageOpen(true)}
       onLogout={() => void auth.logout().then(() => showToast('로그아웃했습니다.'))}
       onToggleTheme={() => setTheme((current) => { const next = current === 'light' ? 'dark' : 'light'; window.localStorage.setItem('popup-store-map.theme', next); return next })} />}
 
@@ -296,7 +323,8 @@ function App() {
           activeStoreId={highlightedStore?.id ?? activeStore?.id ?? null} category={category} query={appliedQuery} mapContent={map}
           onCategoryChange={(value) => { setCategory(value); setDraftQuery(''); setAppliedQuery('') }} onOpenDetails={openHomeDetails}
           onOpenMapDetails={openMapDetails}
-          onAddToSchedule={toggleSchedule} onToggleLike={toggleLike} onHighlight={setHighlightedStore} />}
+          onAddToSchedule={toggleSchedule} onToggleLike={toggleLike} favoriteIds={favorites.favoriteIds}
+          onToggleFavorite={toggleFavorite} onHighlight={setHighlightedStore} />}
       {routePlanner.selectedStores.length > 0 && !scheduleExpanded && <button type="button" className="schedule-dock"
         onClick={() => setScheduleExpanded(true)} aria-label={`오늘 일정 ${routePlanner.selectedStores.length}곳 펼치기`}>
         <span><strong>오늘 일정 {routePlanner.selectedStores.length}곳</strong>
@@ -306,10 +334,15 @@ function App() {
     </>}
     {toastMessage && <div className="app-toast" role="status">{toastMessage}</div>}
     <AuthModal open={authModal.open} initialMode={authModal.mode} onClose={() => setAuthModal((current) => ({ ...current, open: false }))} />
+    <MyPageDrawer open={myPageOpen} user={auth.user} favorites={favorites.items} isLoading={favorites.isLoading}
+      onClose={() => setMyPageOpen(false)} onOpenDetails={(store) => { setMyPageOpen(false); openHomeDetails(store) }}
+      onRemoveFavorite={toggleFavorite} onAddToSchedule={toggleSchedule}
+      onLogout={() => void auth.logout().then(() => { setMyPageOpen(false); showToast('로그아웃했습니다.') })} />
     {homeDetailStore && !navigationActive && <HomepagePopupDetailsModal popupStore={homeDetailStore}
       isRouteSelected={routePlanner.selectedStores.some(({ id }) => id === homeDetailStore.id)}
       routeSelectionFull={routePlanner.selectedStores.length >= 8} onToggleRoute={toggleSchedule}
-      onToggleLike={toggleLike} onClose={() => setHomeDetailStore(null)} onViewOnMap={() => {
+      onToggleLike={toggleLike} isFavorited={favorites.favoriteIds.has(homeDetailStore.id)} onToggleFavorite={toggleFavorite}
+      onClose={() => setHomeDetailStore(null)} onViewOnMap={() => {
         const store = homeDetailStore
         setHomeDetailStore(null)
         setActiveStore(store)

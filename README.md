@@ -51,6 +51,18 @@ Repository로 저장하며, 재시작할 때 각 샘플 이름이 이미 존재�
 - Cookie를 사용하는 refresh/logout 요청은 Origin이 전달된 경우 `AUTH_ALLOWED_ORIGINS` 목록으로
   검사합니다. 모든 origin 허용은 사용하지 않습니다.
 
+로그인 사용자는 카드와 상세의 Bookmark 버튼으로 개인 즐겨찾기를 관리할 수 있습니다. Heart는
+공개 좋아요 지표이고 Bookmark는 다른 사용자에게 공개되거나 featured 점수에 반영되지 않는 개인
+저장입니다. 비로그인 상태에서 Bookmark를 누르면 로그인 창이 열리고, 로그인 성공 후 원래 팝업을
+자동으로 저장합니다. 헤더의 마이페이지에서 최근 저장순 목록을 열어 상세 보기, 해제, 오늘 일정
+추가를 할 수 있습니다.
+
+```text
+POST   /api/users/me/favorites/{popupId}
+DELETE /api/users/me/favorites/{popupId}
+GET    /api/users/me/favorites?page=0&size=10&sort=createdAt,desc
+```
+
 ## Frontend 실행
 
 Node.js와 npm이 필요합니다.

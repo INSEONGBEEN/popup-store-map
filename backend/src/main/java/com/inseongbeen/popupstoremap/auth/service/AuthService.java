@@ -28,6 +28,7 @@ import com.inseongbeen.popupstoremap.auth.repository.AppUserRepository;
 import com.inseongbeen.popupstoremap.auth.repository.RefreshTokenRepository;
 import com.inseongbeen.popupstoremap.auth.security.CurrentUser;
 import com.inseongbeen.popupstoremap.auth.security.JwtTokenService;
+import com.inseongbeen.popupstoremap.popupstore.engagement.service.PopupEngagementService;
 
 @Service
 public class AuthService {
@@ -39,16 +40,19 @@ public class AuthService {
     private final JwtTokenService jwtTokens;
     private final AuthProperties properties;
     private final CurrentUser currentUser;
+    private final PopupEngagementService engagementService;
 
     public AuthService(AppUserRepository userRepository, RefreshTokenRepository refreshTokenRepository,
                        PasswordEncoder passwordEncoder, JwtTokenService jwtTokens,
-                       AuthProperties properties, CurrentUser currentUser) {
+                       AuthProperties properties, CurrentUser currentUser,
+                       PopupEngagementService engagementService) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokens = jwtTokens;
         this.properties = properties;
         this.currentUser = currentUser;
+        this.engagementService = engagementService;
     }
 
     @Transactional
@@ -78,6 +82,7 @@ public class AuthService {
                 .filter(candidate -> passwordEncoder.matches(request.password(), candidate.getPasswordHash()))
                 .orElseThrow(() -> new AuthException(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호를 확인해 주세요."));
         user.recordLogin(LocalDateTime.now());
+        engagementService.mergeAnonymousLikes(user.getId(), request.anonymousVisitorId());
         return issueTokens(user);
     }
 

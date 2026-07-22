@@ -15,6 +15,10 @@ public interface PopupLikeRepository extends JpaRepository<PopupLike, Long> {
     Optional<PopupLike> findByPopupStoreIdAndAnonymousVisitorId(Long popupStoreId, String anonymousVisitorId);
     boolean existsByPopupStoreIdAndAnonymousVisitorId(Long popupStoreId, String anonymousVisitorId);
     List<PopupLike> findAllByPopupStoreIdInAndAnonymousVisitorId(Collection<Long> popupStoreIds, String anonymousVisitorId);
+    Optional<PopupLike> findByPopupStoreIdAndUserId(Long popupStoreId, Long userId);
+    boolean existsByPopupStoreIdAndUserId(Long popupStoreId, Long userId);
+    List<PopupLike> findAllByPopupStoreIdInAndUserId(Collection<Long> popupStoreIds, Long userId);
+    List<PopupLike> findAllByAnonymousVisitorId(String anonymousVisitorId);
 
     @Query("""
             select popupLike.popupStoreId as popupStoreId, count(popupLike) as likeCount

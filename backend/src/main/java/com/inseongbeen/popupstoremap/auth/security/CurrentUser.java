@@ -1,5 +1,7 @@
 package com.inseongbeen.popupstoremap.auth.security;
 
+import java.util.Optional;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -32,5 +34,10 @@ public class CurrentUser {
         } catch (NumberFormatException exception) {
             throw new AuthException(HttpStatus.UNAUTHORIZED, "인증 정보를 확인할 수 없습니다.");
         }
+    }
+
+    public Optional<AppUser> optional(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof Jwt)) return Optional.empty();
+        return Optional.of(require(authentication));
     }
 }

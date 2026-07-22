@@ -10,7 +10,7 @@ interface PopupStoreQueryState {
   errorMessage: string | null
 }
 
-export function usePopupStores(): PopupStoreQueryState & {
+export function usePopupStores(authIdentity: string = 'anonymous'): PopupStoreQueryState & {
   updateEngagement: (popupStoreId: number, engagement: PopupEngagement) => void
 } {
   const [state, setState] = useState<PopupStoreQueryState>({
@@ -43,7 +43,7 @@ export function usePopupStores(): PopupStoreQueryState & {
 
     void loadPopupStores()
     return () => controller.abort()
-  }, [])
+  }, [authIdentity])
 
   const updateEngagement = (popupStoreId: number, engagement: PopupEngagement) => {
     setState((current) => ({

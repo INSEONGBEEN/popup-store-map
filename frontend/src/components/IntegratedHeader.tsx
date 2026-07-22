@@ -21,6 +21,7 @@ interface Props {
   user: AuthUser | null
   onOpenAuth: (mode: 'login' | 'signup') => void
   onLogout: () => void
+  onOpenMyPage: () => void
 }
 
 export const IntegratedHeader = memo(function IntegratedHeader(props: Props) {
@@ -62,7 +63,8 @@ export const IntegratedHeader = memo(function IntegratedHeader(props: Props) {
       <strong>{props.user ? `${props.user.nickname}님` : '마이페이지'}</strong>
       {props.authStatus === 'checking' ? <p>로그인 상태를 확인하고 있습니다…</p> : props.user ? <>
         <p>{props.user.email}</p>
-        {['즐겨찾기', '방문 기록', '내 리뷰'].map((label) => <button key={label} type="button" disabled>{label}<small>다음 단계</small></button>)}
+        <button type="button" onClick={() => { props.onOpenMyPage(); setOpenMenu(null) }}>즐겨찾기<small>저장 목록 보기</small></button>
+        {['방문 기록', '내 리뷰'].map((label) => <button key={label} type="button" disabled>{label}<small>다음 단계</small></button>)}
         <button type="button" onClick={() => { props.onLogout(); setOpenMenu(null) }}>로그아웃</button>
       </> : <>
         <p>로그인하면 즐겨찾기와 방문 기록을 이용할 수 있어요.</p>

@@ -14,7 +14,9 @@ import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.util.List;
+import java.util.Optional;
 
+import com.inseongbeen.popupstoremap.auth.security.CurrentUser;
 import com.inseongbeen.popupstoremap.common.exception.GlobalExceptionHandler;
 import com.inseongbeen.popupstoremap.popupstore.service.PopupStoreService;
 
@@ -26,7 +28,9 @@ class PopupStoreSearchControllerTests {
     @BeforeEach
     void setUp() {
         popupStoreService = mock(PopupStoreService.class);
-        PopupStoreController controller = new PopupStoreController(popupStoreService);
+        CurrentUser currentUser = mock(CurrentUser.class);
+        when(currentUser.optional(null)).thenReturn(Optional.empty());
+        PopupStoreController controller = new PopupStoreController(popupStoreService, currentUser);
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
@@ -55,7 +59,7 @@ class PopupStoreSearchControllerTests {
 
     @Test
     void featuredEndpointUsesOneRankedServiceRequest() throws Exception {
-        when(popupStoreService.findFeatured(6, "visitor-a")).thenReturn(List.of());
+        when(popupStoreService.findFeatured(6, "visitor-a", null)).thenReturn(List.of());
 
         mockMvc.perform(get("/api/popup-stores/featured")
                         .param("limit", "6")
@@ -63,6 +67,6 @@ class PopupStoreSearchControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
 
-        verify(popupStoreService).findFeatured(6, "visitor-a");
+        verify(popupStoreService).findFeatured(6, "visitor-a", null);
     }
 }
