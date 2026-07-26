@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { recordPlanAdd, recordPopupView, setPopupLike } from './api/popupEngagement'
+import { recordPlanAdd, setPopupLike } from './api/popupEngagement'
 import { IntegratedHeader } from './components/IntegratedHeader'
 import { AuthModal } from './components/AuthModal'
 import { MyPageDrawer } from './components/MyPageDrawer'
@@ -17,6 +17,9 @@ import { useAuth } from './features/auth/authContext'
 import { useFavorites } from './features/favorites/useFavorites'
 import { useVisits } from './features/visits/useVisits'
 import { useMyReviews } from './features/reviews/useMyReviews'
+import { useThemePreference } from './features/app/useThemePreference'
+import { useTransientToast } from './features/app/useTransientToast'
+import { usePopupStoreDetails } from './features/popupstore/usePopupStoreDetails'
 import { deleteReview, type MyReview } from './api/reviews'
 import './App.css'
 
@@ -25,16 +28,10 @@ function App() {
   const { popupStores, featuredStores, isLoading, errorMessage, updateEngagement, updateReviewSummary } = usePopupStores(
     auth.user ? `user:${auth.user.id}` : auth.authStatus,
   )
-  const [activeStore, setActiveStore] = useState<PopupStore | null>(null)
-  const [homeDetailStore, setHomeDetailStore] = useState<PopupStore | null>(null)
-  const [highlightedStore, setHighlightedStore] = useState<PopupStore | null>(null)
   const [draftQuery, setDraftQuery] = useState('')
   const [appliedQuery, setAppliedQuery] = useState('')
   const [category, setCategory] = useState('ALL')
   const [scheduleExpanded, setScheduleExpanded] = useState(false)
-  const [toastMessage, setToastMessage] = useState<string | null>(null)
-  const [theme, setTheme] = useState<'light' | 'dark'>(() =>
-    window.localStorage.getItem('popup-store-map.theme') === 'dark' ? 'dark' : 'light')
   const [gpsMode, setGpsMode] = useState<GpsDisplayMode>('idle')
   const [guidanceRequested, setGuidanceRequested] = useState(false)
   const [guidanceStageText, setGuidanceStageText] = useState<string | null>(null)
@@ -49,6 +46,15 @@ function App() {
   const initialLocateCenteredRef = useRef(false)
   const locatePauseTimerRef = useRef<number | null>(null)
   const geolocation = useCurrentLocation()
+  const { theme, toggleTheme } = useThemePreference()
+  const { message: toastMessage, show: showToast } = useTransientToast()
+  const popupDetails = usePopupStoreDetails(popupStores, updateEngagement)
+  const {
+    activeStore, homeDetailStore, highlightedStore,
+    setActiveStore, setHomeDetailStore, setHighlightedStore,
+    openMapDetails: selectMapDetails,
+    openHomeDetails: selectHomeDetails,
+  } = popupDetails
   const routePlanner = useRoutePlanner(geolocation.location)
   const navigation = usePedestrianNavigation(routePlanner.routeState.result, routePlanner.selectedStores, geolocation.location)
   const { clearStores, prepareNavigationRoute } = routePlanner
@@ -65,15 +71,6 @@ function App() {
     }
   }, [])
 
-  useEffect(() => {
-    setActiveStore((current) => current
-      ? popupStores.find(({ id }) => id === current.id) ?? current
-      : null)
-    setHomeDetailStore((current) => current
-      ? popupStores.find(({ id }) => id === current.id) ?? current
-      : null)
-  }, [popupStores])
-
   const filteredStores = useMemo(() => filterPopupStores(popupStores, category, appliedQuery),
     [appliedQuery, category, popupStores])
   const activeStoreIsSelected = activeStore
@@ -84,10 +81,6 @@ function App() {
   const currentStopName = navigation.activeWaypointIndex > 0
     ? routePlanner.selectedStores[navigation.activeWaypointIndex - 1]?.name ?? null : '출발지'
 
-  const showToast = useCallback((message: string) => {
-    setToastMessage(message)
-    window.setTimeout(() => setToastMessage((current) => current === message ? null : current), 2200)
-  }, [])
   const favorites = useFavorites(showToast)
   const visits = useVisits(showToast)
   const myReviews = useMyReviews()
@@ -158,23 +151,15 @@ function App() {
       .catch(() => showToast('방문 기록 저장에 실패했지만 길안내는 계속됩니다.'))
   }, [auth.isAuthenticated, navigation.arrivalEvent, showToast, visits])
 
-  const recordDetailsView = useCallback((store: PopupStore) => {
-    void recordPopupView(store.id).then((engagement) => updateEngagement(store.id, engagement)).catch(() => undefined)
-  }, [updateEngagement])
-
   const openMapDetails = useCallback((store: PopupStore) => {
-    setActiveStore(store)
-    setHomeDetailStore(null)
+    selectMapDetails(store)
     setScheduleExpanded(false)
-    recordDetailsView(store)
-  }, [recordDetailsView])
+  }, [selectMapDetails])
 
   const openHomeDetails = useCallback((store: PopupStore) => {
-    setHomeDetailStore(store)
-    setActiveStore(null)
+    selectHomeDetails(store)
     setScheduleExpanded(false)
-    recordDetailsView(store)
-  }, [recordDetailsView])
+  }, [selectHomeDetails])
 
   const toggleSchedule = useCallback((store: PopupStore) => {
     const selected = routePlanner.selectedStores.some(({ id }) => id === store.id)
@@ -254,7 +239,7 @@ function App() {
       preparingRef.current = false
     }
   }, [ensureCurrentPosition, guidanceRequested, location, prepareNavigationRoute,
-    routePlanner.originType, routePlanner.selectedStores.length, showToast])
+    routePlanner.originType, routePlanner.selectedStores.length, setActiveStore, showToast])
 
   useEffect(() => {
     if (gpsMode === 'idle') initialLocateCenteredRef.current = false
@@ -373,7 +358,7 @@ function App() {
       onOpenAuth={(mode) => setAuthModal({ open: true, mode })}
       onOpenMyPage={() => setMyPageOpen(true)}
       onLogout={() => void auth.logout().then(() => showToast('로그아웃했습니다.'))}
-      onToggleTheme={() => setTheme((current) => { const next = current === 'light' ? 'dark' : 'light'; window.localStorage.setItem('popup-store-map.theme', next); return next })} />}
+      onToggleTheme={toggleTheme} />}
 
     {navigationActive ? <div className="navigation-map-stage">{map}{routePlannerPanel}</div> : <>
       {isLoading ? <div className="home-loading">성수의 팝업을 모으고 있어요…</div> : errorMessage ? <div className="home-loading error">{errorMessage}</div> :
