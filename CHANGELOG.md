@@ -4,6 +4,10 @@
 
 ### Added
 
+- Flyway V1/V2 PostgreSQL schema migration과 PostgreSQL 17/PostGIS Testcontainers 검증
+- PopupStore 관리 API의 ADMIN 인가 및 실제 Bearer JWT 보안 통합 테스트
+- 일관된 API 오류 `code`와 production profile 보안 검증
+- DB 좌표·날짜·리뷰·요약 무결성 제약과 migration 전 개발 DB 백업 절차
 - 이메일 회원가입·로그인, 메모리 Access Token, 회전형 HttpOnly Refresh Token 기반 인증
 - 새로고침 인증 복원, 401 single-flight 갱신 및 접근 가능한 로그인·회원가입 Modal
 - 로그인 시 익명 좋아요를 계정 좋아요로 병합하는 공개 참여 지표 흐름
@@ -37,6 +41,12 @@
 
 ### Changed
 
+- Hibernate schema 자동 변경을 `ddl-auto=validate`로 전환
+- PopupStore service를 command/query/ranking 책임으로 분리하고 기존 facade contract 유지
+- 리뷰 verified 방문 확인을 건별 조회에서 batch 조회로 변경
+- Frontend theme·toast·팝업 상세 선택 수명주기를 feature hook으로 분리
+- CORS를 명시적인 허용 origin 목록으로 제한하고 production Swagger를 비활성화
+- dev 샘플을 이름 기준으로 중복 삽입하지 않으면서 기준 정의의 날짜·상태 변경은 재실행 시 동기화
 - 일정 추가와 경로 생성을 분리하고 `길안내 시작` 시점에만 최적화·상세 경로를 요청하도록 개선
 - Mac Wi-Fi 위치 fallback, 단일 watcher, 최근 위치 재사용 및 모바일 절대 방향 보정 강화
 - 모바일 safe-area, Header, 카드, Modal, Drawer, 일정 Dock 및 GPS FAB 반응형 레이아웃 개선

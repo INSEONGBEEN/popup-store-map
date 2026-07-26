@@ -108,21 +108,14 @@ GET    /api/users/me/reviews
 
 ### 회원 스키마 적용
 
-현재 프로젝트에는 Flyway/Liquibase가 없고 개발 DB는 기존 `ddl-auto=update` 정책을
-유지합니다. 운영 DB 정책을 임의로 바꾸지 않기 위해 자동 마이그레이션 의존성은
-추가하지 않았습니다. 대신 [회원 스키마 SQL](backend/docs/member-schema-postgresql.sql)을 제공합니다.
+회원·팝업·참여 데이터의 실행 가능한 스키마 기준은
+[`db/migration`](backend/src/main/resources/db/migration)입니다. Flyway가 빈 DB에는 V1부터,
+기존 개발 DB에는 백업 후 baseline과 V2 보정 migration을 적용하고 JPA는
+`ddl-auto=validate`로 결과만 검증합니다.
 
-적용 순서:
-
-1. 대상 PostgreSQL DB를 백업하고 스크립트를 리뷰합니다.
-2. 기존 `popup_store`, `popup_like` 테이블이 있는 DB에 SQL을 트랜잭션으로 적용합니다.
-3. `app_user` → `refresh_token`/`popup_like` 회원 연결 → `popup_favorite` →
-   `visit_history` → `popup_review`/`popup_review_summary` 순서로 생성됩니다.
-4. unique, check, FK와 사용자·팝업·생성일 조합 index를 확인한 뒤 애플리케이션을
-   배포합니다.
-
-스크립트는 민감한 DB 접속 정보를 포함하지 않으며, 실행 전 해당 환경의 기존
-스키마와 데이터를 반드시 검토해야 합니다.
+과거 수동 적용용 [회원 스키마 SQL](backend/docs/member-schema-postgresql.sql)은 이력과 비교를
+위해 남겨둔 참고 문서이며 현재 DB에 직접 실행하지 않습니다. 운영 DB에는 자동 baseline을
+사용하지 않고 백업·데이터 정합성 검사·migration 검토를 먼저 수행해야 합니다.
 
 ## Frontend 실행
 
@@ -433,14 +426,64 @@ viewport 안에 남도록 배치합니다.
 
 ```bash
 cd backend
-./gradlew build
 ./gradlew test
+./gradlew build
 
 cd ../frontend
 npm test
-npm run build
 npm run lint
+npm run build
 ```
+
+Backend 전체 테스트에는 Docker 기반 PostgreSQL 17/PostGIS Testcontainers migration 검증이 포함됩니다.
+Docker를 실행한 상태에서 테스트해야 하며, 최초 실행은 이미지를 내려받아 시간이 더 걸릴 수 있습니다.
+
+## 데이터베이스 migration
+
+실행 가능한 schema의 단일 기준은 `backend/src/main/resources/db/migration`입니다.
+
+- V1은 빈 PostgreSQL에 전체 application schema를 만듭니다.
+- V2는 기존 prototype DB의 nullable name, OID description, 누락 FK/CHECK를 데이터 보존 방식으로 보정합니다.
+- JPA는 `ddl-auto=validate`로 Flyway 결과와 Entity의 정합성만 검사하며 schema를 임의 변경하지 않습니다.
+- `dev` profile은 기존 non-empty 개발 DB를 V1로 baseline한 뒤 V2부터 적용합니다.
+- `backend/docs/member-schema-postgresql.sql`은 과거 참고 자료이며 현재 환경에 직접 실행하지 않습니다.
+
+기존 DB에 처음 적용할 때는 반드시 먼저 백업하고, migration 성공과 행 수를 확인합니다. production에서는
+`baseline-on-migrate`를 자동 활성화하지 않으며 사전 검토한 schema에서만 명시적으로 baseline합니다.
+
+## 운영 보안 설정
+
+PopupStore 조회·검색·상세는 공개 API이고 등록·수정·삭제는 `ADMIN` JWT만 허용합니다. 일반 `USER`는
+관리 API에 접근할 수 없습니다. prod profile은 Secure refresh cookie와 localhost가 아닌 명시적 HTTPS
+origin을 요구하며 Swagger/OpenAPI UI를 비활성화합니다.
+
+필수 환경변수 예시는 실제 값을 저장소에 넣지 않고 배포 환경의 secret manager에서 주입합니다.
+
+```bash
+SPRING_PROFILES_ACTIVE=prod
+JWT_SECRET=<32-byte 이상 secret>
+AUTH_ALLOWED_ORIGINS=https://your-frontend.example
+AUTH_COOKIE_SECURE=true
+```
+
+Refresh Token은 SHA-256 hash만 DB에 저장하고 회전 후 이전 토큰을 거부합니다. 여러 기기·침해 대응을 위한
+token family 단위 재사용 탐지와 rate limiting은 현재 단일 개발 서비스 범위에는 추가하지 않았으며,
+배포 시 API Gateway/WAF 정책과 함께 설계해야 합니다.
+
+## Production readiness와 성능 기준선
+
+초기 분석은 [PROJECT_ANALYSIS_REPORT.md](PROJECT_ANALYSIS_REPORT.md), 변경 이유·Phase checkpoint·측정값은
+[production-readiness.md](docs/production-readiness.md)에 기록합니다.
+
+개발 DB 18건 기준 검색 `lower(name) LIKE '%성수%'`는 PostgreSQL에서 0.112ms sequential scan이므로
+pg_trgm/GIN index를 추가하지 않았습니다. 리뷰 2건 목록의 verified 방문 확인은 실제 prepared statement
+4회가 재현되어 batch 조회로 3회까지 줄였습니다. 작은 로컬 데이터의 HTTP 시간 차이는 유의미하지 않아
+운영 성능 향상으로 표현하지 않습니다.
+
+PostGIS extension과 Hibernate Spatial 의존성은 유지하지만 현재 API에는 반경/거리순 조회 요구가 없어
+geometry migration과 GiST index를 추가하지 않았습니다. 해당 기능을 도입할 때 SRID 4326, migration
+호환성, 실제 EXPLAIN 결과를 함께 검토합니다. Redis도 현재 반복 쿼리 비용과 stale/invalidation 근거가
+없어 도입하지 않았습니다.
 
 ## 아직 구현하지 않은 기능
 
@@ -449,3 +492,5 @@ npm run lint
 - 소셜 로그인, 이메일 인증, 비밀번호 재설정, 회원 탈퇴
 - 방문 기록 삭제, 이미지 리뷰, 리뷰 댓글·신고
 - 관리자 운영 화면과 상용 배포 구성
+- token family 기반 Refresh Token 재사용 탐지와 운영 rate limiting
+- PostGIS 반경/거리순 팝업 검색
