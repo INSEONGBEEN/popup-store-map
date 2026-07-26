@@ -88,7 +88,7 @@ HTTP 값은 첫 호출을 포함한 5회 범위이며 payload는 JSON byte다.
 | featured 4 | 7.8–21.7ms / 2,838B | 동일 기능 | no DB rewrite | 후보 18건 |
 | review list, 2 reviews | 4 statements | 3 statements | -1 and O(1) verified lookup | N+1 재현 |
 | review list HTTP | 4.5–31.6ms / 560B | 4.5–18.1ms / 560B | 유의미하다고 단정하지 않음 | 로컬 표본이 작음 |
-| Vite JS | 630.50kB gzip 191.45kB | 631.21kB gzip 191.64kB | +0.71kB | 3개 lifecycle hook |
+| Vite JS | 630.50kB gzip 191.45kB | 631.21kB gzip 191.65kB | +0.71kB | 3개 lifecycle hook |
 
 검색 실행계획은 18행 sequential scan, planning 0.185ms, execution 0.112ms였다. `%keyword%` 검색이
 실제 운영 데이터에서 병목이 되는 경우에만 pg_trgm/GIN을 다시 측정한다.
