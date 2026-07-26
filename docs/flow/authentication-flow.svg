@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="620" viewBox="0 0 1300 620" role="img" aria-labelledby="t d">
+  <title id="t">Authentication and refresh rotation flow</title><desc id="d">Browser, auth API and database token lifecycle.</desc>
+  <defs><marker id="a" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9Z" fill="#64748b"/></marker><style>.h{font:700 22px system-ui;fill:#172554}.s{font:600 15px system-ui;fill:#334155}.l{stroke:#64748b;stroke-width:2.5;marker-end:url(#a)}.n{font:500 13px system-ui;fill:#475569}</style></defs>
+  <rect width="1300" height="620" fill="#f8fafc"/><text x="50" y="55" class="h">Authentication · Access JWT + Refresh Rotation</text>
+  <rect x="60" y="100" width="220" height="80" rx="18" fill="#eff6ff" stroke="#60a5fa" stroke-width="2"/><text x="170" y="148" text-anchor="middle" class="s">React AuthProvider</text>
+  <rect x="420" y="100" width="250" height="80" rx="18" fill="#f0fdf4" stroke="#4ade80" stroke-width="2"/><text x="545" y="148" text-anchor="middle" class="s">Spring Security / Auth API</text>
+  <rect x="830" y="100" width="250" height="80" rx="18" fill="#faf5ff" stroke="#c084fc" stroke-width="2"/><text x="955" y="148" text-anchor="middle" class="s">refresh_token table</text>
+  <line x1="280" y1="140" x2="420" y2="140" class="l"/><text x="350" y="124" text-anchor="middle" class="n">login credentials</text>
+  <line x1="670" y1="140" x2="830" y2="140" class="l"/><text x="750" y="124" text-anchor="middle" class="n">store SHA-256 hash</text>
+  <rect x="420" y="245" width="250" height="90" rx="18" fill="#fff7ed" stroke="#fb923c" stroke-width="2"/><text x="545" y="282" text-anchor="middle" class="s">Issue access JWT</text><text x="545" y="307" text-anchor="middle" class="n">15 min · role claim</text>
+  <rect x="60" y="245" width="220" height="90" rx="18" fill="#fff" stroke="#94a3b8" stroke-width="2"/><text x="170" y="282" text-anchor="middle" class="s">Memory access token</text><text x="170" y="307" text-anchor="middle" class="n">HttpOnly refresh cookie</text>
+  <line x1="420" y1="290" x2="280" y2="290" class="l"/>
+  <rect x="60" y="430" width="220" height="90" rx="18" fill="#eff6ff" stroke="#60a5fa" stroke-width="2"/><text x="170" y="467" text-anchor="middle" class="s">401 retry coordinator</text><text x="170" y="492" text-anchor="middle" class="n">one refresh in flight</text>
+  <rect x="420" y="430" width="250" height="90" rx="18" fill="#f0fdf4" stroke="#4ade80" stroke-width="2"/><text x="545" y="467" text-anchor="middle" class="s">Verify cookie + Origin</text><text x="545" y="492" text-anchor="middle" class="n">rotate / revoke old token</text>
+  <rect x="830" y="430" width="250" height="90" rx="18" fill="#faf5ff" stroke="#c084fc" stroke-width="2"/><text x="955" y="467" text-anchor="middle" class="s">Link replacement token</text><text x="955" y="492" text-anchor="middle" class="n">expiry + revoked_at</text>
+  <line x1="280" y1="475" x2="420" y2="475" class="l"/><line x1="670" y1="475" x2="830" y2="475" class="l"/>
+  <path d="M545 430 V350 H170 V430" fill="none" class="l"/><text x="360" y="370" text-anchor="middle" class="n">expired access token</text>
+</svg>

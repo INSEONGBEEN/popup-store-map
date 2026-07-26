@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="860" viewBox="0 0 1440 860" role="img" aria-labelledby="title desc">
+  <title id="title">Popup Store Map system architecture</title>
+  <desc id="desc">User, React, Spring Boot, PostgreSQL, Valhalla and OpenStreetMap data flow.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#64748b"/></marker>
+    <style>
+      .title{font:700 30px system-ui;fill:#172554}.sub{font:500 15px system-ui;fill:#64748b}
+      .box{stroke-width:2;rx:22}.h{font:700 20px system-ui;fill:#172554}.t{font:500 14px system-ui;fill:#334155}
+      .line{stroke:#64748b;stroke-width:3;fill:none;marker-end:url(#arrow)}.label{font:600 13px system-ui;fill:#475569}
+    </style>
+  </defs>
+  <rect width="1440" height="860" fill="#f8fafc"/>
+  <text x="70" y="65" class="title">Popup Store Map · System Architecture</text>
+  <text x="70" y="94" class="sub">Verified from the refactor/production-readiness codebase · 2026-07-26</text>
+
+  <rect x="70" y="175" width="190" height="130" class="box" fill="#fff7ed" stroke="#fb7185"/>
+  <text x="165" y="220" text-anchor="middle" class="h">User</text>
+  <text x="165" y="250" text-anchor="middle" class="t">Desktop / Mobile</text>
+  <text x="165" y="276" text-anchor="middle" class="t">localhost or HTTPS</text>
+
+  <rect x="350" y="130" width="270" height="220" class="box" fill="#eff6ff" stroke="#60a5fa"/>
+  <text x="485" y="175" text-anchor="middle" class="h">React + TypeScript</text>
+  <text x="485" y="205" text-anchor="middle" class="t">Vite · Axios · feature hooks</text>
+  <text x="485" y="231" text-anchor="middle" class="t">Auth / discovery / planning</text>
+  <text x="485" y="257" text-anchor="middle" class="t">OpenLayers map + navigation</text>
+  <text x="485" y="300" text-anchor="middle" class="t">/api relative requests</text>
+  <text x="485" y="326" text-anchor="middle" class="t">Vite proxy in development</text>
+
+  <rect x="730" y="110" width="330" height="260" class="box" fill="#f0fdf4" stroke="#4ade80"/>
+  <text x="895" y="155" text-anchor="middle" class="h">Spring Boot 4.1</text>
+  <text x="895" y="185" text-anchor="middle" class="t">Spring Security · JWT · Validation</text>
+  <text x="895" y="211" text-anchor="middle" class="t">Feature controllers / services</text>
+  <text x="895" y="237" text-anchor="middle" class="t">JPA repositories · transactions</text>
+  <line x1="770" y1="260" x2="1020" y2="260" stroke="#bbf7d0"/>
+  <text x="895" y="290" text-anchor="middle" class="t">auth · popupstore · favorite</text>
+  <text x="895" y="316" text-anchor="middle" class="t">review · visit · engagement · route</text>
+  <text x="895" y="342" text-anchor="middle" class="t">consistent API error contract</text>
+
+  <rect x="1160" y="130" width="220" height="220" class="box" fill="#faf5ff" stroke="#c084fc"/>
+  <text x="1270" y="175" text-anchor="middle" class="h">PostgreSQL</text>
+  <text x="1270" y="205" text-anchor="middle" class="t">PostGIS extension</text>
+  <text x="1270" y="231" text-anchor="middle" class="t">10 application tables</text>
+  <text x="1270" y="257" text-anchor="middle" class="t">Flyway V1–V2</text>
+  <text x="1270" y="283" text-anchor="middle" class="t">JPA validate</text>
+  <text x="1270" y="317" text-anchor="middle" class="t">lat / lon columns</text>
+
+  <path d="M260 240 H350" class="line"/><text x="305" y="225" text-anchor="middle" class="label">UI</text>
+  <path d="M620 240 H730" class="line"/><text x="675" y="225" text-anchor="middle" class="label">JSON / JWT</text>
+  <path d="M1060 240 H1160" class="line"/><text x="1110" y="225" text-anchor="middle" class="label">JPA / SQL</text>
+
+  <rect x="350" y="500" width="270" height="170" class="box" fill="#ecfeff" stroke="#22d3ee"/>
+  <text x="485" y="545" text-anchor="middle" class="h">OpenStreetMap</text>
+  <text x="485" y="576" text-anchor="middle" class="t">Base tile provider</text>
+  <text x="485" y="602" text-anchor="middle" class="t">Rendered by OpenLayers</text>
+  <text x="485" y="628" text-anchor="middle" class="t">© contributor attribution</text>
+
+  <rect x="730" y="475" width="330" height="220" class="box" fill="#fff7ed" stroke="#fb923c"/>
+  <text x="895" y="520" text-anchor="middle" class="h">Valhalla</text>
+  <text x="895" y="550" text-anchor="middle" class="t">Docker Compose · local development</text>
+  <text x="895" y="576" text-anchor="middle" class="t">pedestrian route + time-distance matrix</text>
+  <text x="895" y="602" text-anchor="middle" class="t">Seoul-area OSM graph tiles</text>
+  <text x="895" y="628" text-anchor="middle" class="t">polyline6 → [longitude, latitude]</text>
+  <text x="895" y="654" text-anchor="middle" class="t">raw response hidden behind backend</text>
+
+  <rect x="1160" y="500" width="220" height="170" class="box" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="1270" y="545" text-anchor="middle" class="h">Flyway</text>
+  <text x="1270" y="576" text-anchor="middle" class="t">Versioned migrations</text>
+  <text x="1270" y="602" text-anchor="middle" class="t">Schema history</text>
+  <text x="1270" y="628" text-anchor="middle" class="t">Startup validation</text>
+
+  <path d="M485 350 V500" class="line"/><text x="510" y="428" class="label">tile HTTPS</text>
+  <path d="M895 370 V475" class="line"/><text x="918" y="427" class="label">HTTP</text>
+  <path d="M1270 500 V350" class="line"/><text x="1294" y="428" class="label">migrate</text>
+
+  <rect x="70" y="760" width="1310" height="55" rx="14" fill="#e2e8f0"/>
+  <text x="725" y="794" text-anchor="middle" class="t">External boundaries: OSM tiles and Valhalla graph data · Secret values stay outside source control</text>
+</svg>

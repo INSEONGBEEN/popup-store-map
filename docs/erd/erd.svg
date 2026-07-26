@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1180" viewBox="0 0 1600 1180" role="img" aria-labelledby="title desc">
+  <title id="title">Popup Store Map entity relationship diagram</title>
+  <desc id="desc">Ten PostgreSQL application tables and their foreign key relationships.</desc>
+  <defs>
+    <marker id="fk" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#64748b"/></marker>
+    <style>.box{fill:#fff;stroke:#94a3b8;stroke-width:2}.head{fill:#172554}.hn{font:700 17px system-ui;fill:white}.f{font:500 12px ui-monospace,monospace;fill:#334155}.pk{fill:#fff7ed}.ln{stroke:#64748b;stroke-width:2;fill:none;marker-end:url(#fk)}.ttl{font:700 30px system-ui;fill:#172554}.sub{font:500 14px system-ui;fill:#64748b}</style>
+  </defs>
+  <rect width="1600" height="1180" fill="#f8fafc"/>
+  <text x="55" y="55" class="ttl">Popup Store Map · ERD</text>
+  <text x="55" y="82" class="sub">Flyway V1–V2 · PostgreSQL/PostGIS · documentation generated 2026-07-26</text>
+
+  <g transform="translate(55 135)"><rect width="260" height="250" rx="12" class="box"/><rect width="260" height="42" rx="12" class="head"/><text x="130" y="27" text-anchor="middle" class="hn">app_user</text>
+    <rect y="42" width="260" height="23" class="pk"/><text x="12" y="59" class="f">PK id : bigint</text><text x="12" y="83" class="f">email : varchar(254) UQ</text><text x="12" y="107" class="f">password_hash : varchar(100)</text><text x="12" y="131" class="f">nickname : varchar(20)</text><text x="12" y="155" class="f">role : USER | ADMIN</text><text x="12" y="179" class="f">status : ACTIVE | DISABLED</text><text x="12" y="203" class="f">created_at / updated_at</text><text x="12" y="227" class="f">last_login_at</text></g>
+
+  <g transform="translate(460 110)"><rect width="310" height="315" rx="12" class="box"/><rect width="310" height="42" rx="12" class="head"/><text x="155" y="27" text-anchor="middle" class="hn">popup_store</text>
+    <rect y="42" width="310" height="23" class="pk"/><text x="12" y="59" class="f">PK id : bigint</text><text x="12" y="83" class="f">name / address : varchar NOT NULL</text><text x="12" y="107" class="f">latitude / longitude : double</text><text x="12" y="131" class="f">start_date / end_date : date</text><text x="12" y="155" class="f">category : enum string nullable</text><text x="12" y="179" class="f">status : enum string nullable</text><text x="12" y="203" class="f">description : text</text><text x="12" y="227" class="f">image_url : varchar(500)</text><text x="12" y="251" class="f">created_at / updated_at</text><text x="12" y="283" class="f">CHECK dates + coordinates</text></g>
+
+  <g transform="translate(55 490)"><rect width="300" height="215" rx="12" class="box"/><rect width="300" height="42" rx="12" class="head"/><text x="150" y="27" text-anchor="middle" class="hn">refresh_token</text>
+    <rect y="42" width="300" height="23" class="pk"/><text x="12" y="59" class="f">PK id · FK user_id</text><text x="12" y="83" class="f">token_hash : varchar(64) UQ</text><text x="12" y="107" class="f">expires_at / revoked_at</text><text x="12" y="131" class="f">created_at</text><text x="12" y="155" class="f">FK replaced_by_token_id (self)</text><text x="12" y="187" class="f">raw refresh token is not stored</text></g>
+
+  <g transform="translate(430 500)"><rect width="285" height="200" rx="12" class="box"/><rect width="285" height="42" rx="12" class="head"/><text x="142" y="27" text-anchor="middle" class="hn">popup_engagement_summary</text>
+    <rect y="42" width="285" height="23" class="pk"/><text x="12" y="59" class="f">PK/FK popup_store_id</text><text x="12" y="83" class="f">view_count : bigint</text><text x="12" y="107" class="f">like_count : bigint</text><text x="12" y="131" class="f">plan_add_count : bigint</text><text x="12" y="155" class="f">updated_at</text><text x="12" y="179" class="f">CHECK counters >= 0</text></g>
+
+  <g transform="translate(780 480)"><rect width="310" height="240" rx="12" class="box"/><rect width="310" height="42" rx="12" class="head"/><text x="155" y="27" text-anchor="middle" class="hn">popup_engagement_event</text>
+    <rect y="42" width="310" height="23" class="pk"/><text x="12" y="59" class="f">PK id · FK popup_store_id</text><text x="12" y="83" class="f">anonymous_visitor_id</text><text x="12" y="107" class="f">session_id</text><text x="12" y="131" class="f">event_type</text><text x="12" y="155" class="f">occurred_at</text><text x="12" y="187" class="f">UQ store + session + type</text><text x="12" y="211" class="f">DETAIL_VIEW | PLAN_ADD</text></g>
+
+  <g transform="translate(1160 480)"><rect width="300" height="235" rx="12" class="box"/><rect width="300" height="42" rx="12" class="head"/><text x="150" y="27" text-anchor="middle" class="hn">popup_like</text>
+    <rect y="42" width="300" height="23" class="pk"/><text x="12" y="59" class="f">PK id · FK popup_store_id</text><text x="12" y="83" class="f">anonymous_visitor_id nullable</text><text x="12" y="107" class="f">FK user_id nullable</text><text x="12" y="131" class="f">created_at</text><text x="12" y="163" class="f">owner XOR constraint</text><text x="12" y="187" class="f">UQ store + anonymous</text><text x="12" y="211" class="f">UQ store + user</text></g>
+
+  <g transform="translate(55 820)"><rect width="290" height="200" rx="12" class="box"/><rect width="290" height="42" rx="12" class="head"/><text x="145" y="27" text-anchor="middle" class="hn">popup_favorite</text>
+    <rect y="42" width="290" height="23" class="pk"/><text x="12" y="59" class="f">PK id</text><text x="12" y="83" class="f">FK user_id</text><text x="12" y="107" class="f">FK popup_store_id</text><text x="12" y="131" class="f">created_at</text><text x="12" y="163" class="f">UQ user + store</text></g>
+
+  <g transform="translate(415 800)"><rect width="300" height="245" rx="12" class="box"/><rect width="300" height="42" rx="12" class="head"/><text x="150" y="27" text-anchor="middle" class="hn">visit_history</text>
+    <rect y="42" width="300" height="23" class="pk"/><text x="12" y="59" class="f">PK id · FK user_id</text><text x="12" y="83" class="f">FK popup_store_id</text><text x="12" y="107" class="f">visited_at / visit_date</text><text x="12" y="131" class="f">source</text><text x="12" y="155" class="f">route_session_id</text><text x="12" y="179" class="f">created_at</text><text x="12" y="211" class="f">UQ user + store + date</text></g>
+
+  <g transform="translate(780 790)"><rect width="310" height="270" rx="12" class="box"/><rect width="310" height="42" rx="12" class="head"/><text x="155" y="27" text-anchor="middle" class="hn">popup_review</text>
+    <rect y="42" width="310" height="23" class="pk"/><text x="12" y="59" class="f">PK id · FK user_id</text><text x="12" y="83" class="f">FK popup_store_id</text><text x="12" y="107" class="f">FK visit_history_id</text><text x="12" y="131" class="f">rating : 1..5</text><text x="12" y="155" class="f">content : 10..1000 chars</text><text x="12" y="179" class="f">created_at / updated_at</text><text x="12" y="211" class="f">UQ user + store</text></g>
+
+  <g transform="translate(1160 815)"><rect width="300" height="220" rx="12" class="box"/><rect width="300" height="42" rx="12" class="head"/><text x="150" y="27" text-anchor="middle" class="hn">popup_review_summary</text>
+    <rect y="42" width="300" height="23" class="pk"/><text x="12" y="59" class="f">PK/FK popup_store_id</text><text x="12" y="83" class="f">rating_sum : bigint</text><text x="12" y="107" class="f">review_count : bigint</text><text x="12" y="131" class="f">average_rating : double</text><text x="12" y="155" class="f">updated_at</text><text x="12" y="187" class="f">CHECK counters / 0..5</text></g>
+
+  <path d="M315 260 H400 V592 H355" class="ln"/><path d="M460 260 H390 V600 H430" class="ln"/>
+  <path d="M615 425 V500" class="ln"/><path d="M690 425 V460 H935 V480" class="ln"/><path d="M770 260 H1110 V595 H1160" class="ln"/>
+  <path d="M210 385 V780 H200 V820" class="ln"/><path d="M540 425 V760 H560 V800" class="ln"/><path d="M260 385 V750 H850 V790" class="ln"/>
+  <path d="M700 425 V750 H1010 V790" class="ln"/><path d="M565 1045 V1090 H935 V1060" class="ln"/>
+  <path d="M770 330 H1500 V925 H1460" class="ln"/>
+</svg>

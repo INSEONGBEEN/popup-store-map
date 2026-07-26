@@ -4,6 +4,8 @@
 
 ### Added
 
+- 실제 코드 기준 포트폴리오 문서 세트: 시스템/배포 아키텍처, DBML ERD, API 명세, 기능 흐름, UI·Figma handoff, 테스트 전략, 성능 baseline
+- localhost에서 검증한 desktop/mobile discovery, map, login UI 스크린샷
 - Flyway V1/V2 PostgreSQL schema migration과 PostgreSQL 17/PostGIS Testcontainers 검증
 - PopupStore 관리 API의 ADMIN 인가 및 실제 Bearer JWT 보안 통합 테스트
 - 일관된 API 오류 `code`와 production profile 보안 검증
@@ -41,6 +43,7 @@
 
 ### Changed
 
+- README를 프로젝트 개요, UI, Architecture, ERD, API, 구현, 테스트, 배포, 문제 해결, 회고 중심 포트폴리오 구조로 재작성
 - Hibernate schema 자동 변경을 `ddl-auto=validate`로 전환
 - PopupStore service를 command/query/ranking 책임으로 분리하고 기존 facade contract 유지
 - 리뷰 verified 방문 확인을 건별 조회에서 batch 조회로 변경

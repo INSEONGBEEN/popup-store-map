@@ -1,0 +1,151 @@
+// Source of truth: backend/src/main/resources/db/migration
+// Generated documentation only; Flyway remains authoritative.
+
+Table app_user {
+  id bigint [pk, increment]
+  email varchar(254) [not null, unique]
+  password_hash varchar(100) [not null]
+  nickname varchar(20) [not null]
+  role varchar(20) [not null, note: 'USER or ADMIN']
+  status varchar(20) [not null, note: 'ACTIVE or DISABLED']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+  last_login_at timestamp
+}
+
+Table popup_store {
+  id bigint [pk, increment]
+  name varchar(100) [not null]
+  address varchar(255) [not null]
+  latitude double [not null, note: '-90..90']
+  longitude double [not null, note: '-180..180']
+  start_date date [not null]
+  end_date date [not null, note: 'start_date <= end_date']
+  category varchar(30) [note: 'FASHION, BEAUTY, FOOD, CHARACTER, LIFESTYLE, ETC']
+  status varchar(30) [note: 'UPCOMING, OPEN, CLOSED']
+  description text
+  image_url varchar(500)
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table refresh_token {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  token_hash varchar(64) [not null, unique]
+  expires_at timestamp [not null]
+  revoked_at timestamp
+  created_at timestamp [not null]
+  replaced_by_token_id bigint
+
+  Indexes {
+    user_id [name: 'idx_refresh_token_user']
+  }
+}
+
+Table popup_engagement_summary {
+  popup_store_id bigint [pk]
+  view_count bigint [not null, default: 0]
+  like_count bigint [not null, default: 0]
+  plan_add_count bigint [not null, default: 0]
+  updated_at timestamp [not null]
+}
+
+Table popup_engagement_event {
+  id bigint [pk, increment]
+  popup_store_id bigint [not null]
+  anonymous_visitor_id varchar(64) [not null]
+  session_id varchar(64) [not null]
+  event_type varchar(20) [not null, note: 'DETAIL_VIEW or PLAN_ADD']
+  occurred_at timestamp [not null]
+
+  Indexes {
+    (popup_store_id, session_id, event_type) [unique, name: 'uk_popup_engagement_event_session']
+  }
+}
+
+Table popup_like {
+  id bigint [pk, increment]
+  popup_store_id bigint [not null]
+  anonymous_visitor_id varchar(64)
+  user_id bigint
+  created_at timestamp [not null]
+
+  Note: 'Exactly one owner is present: anonymous_visitor_id XOR user_id.'
+  Indexes {
+    (popup_store_id, anonymous_visitor_id) [unique, name: 'uk_popup_like_visitor']
+    (popup_store_id, user_id) [unique, name: 'uk_popup_like_user']
+    user_id [name: 'idx_popup_like_user']
+  }
+}
+
+Table popup_favorite {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  popup_store_id bigint [not null]
+  created_at timestamp [not null]
+
+  Indexes {
+    (user_id, popup_store_id) [unique, name: 'uk_popup_favorite_user_store']
+    (user_id, created_at) [name: 'idx_popup_favorite_user_created']
+    popup_store_id [name: 'idx_popup_favorite_store']
+  }
+}
+
+Table visit_history {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  popup_store_id bigint [not null]
+  visited_at timestamp [not null]
+  visit_date date [not null]
+  source varchar(30) [not null, note: 'NAVIGATION_ARRIVAL or MANUAL_CONFIRMATION']
+  route_session_id varchar(64)
+  created_at timestamp [not null]
+
+  Indexes {
+    (user_id, popup_store_id, visit_date) [unique, name: 'uk_visit_user_store_date']
+    (user_id, visited_at) [name: 'idx_visit_user_visited']
+    popup_store_id [name: 'idx_visit_store']
+  }
+}
+
+Table popup_review {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  popup_store_id bigint [not null]
+  visit_history_id bigint [not null]
+  rating int [not null, note: '1..5']
+  content varchar(1000) [not null, note: '10..1000 characters']
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+
+  Indexes {
+    (user_id, popup_store_id) [unique, name: 'uk_review_user_store']
+    (popup_store_id, created_at) [name: 'idx_review_store_created']
+    user_id [name: 'idx_review_user']
+    visit_history_id [name: 'idx_review_visit']
+  }
+}
+
+Table popup_review_summary {
+  popup_store_id bigint [pk]
+  rating_sum bigint [not null, default: 0]
+  review_count bigint [not null, default: 0]
+  average_rating double [not null, default: 0, note: '0..5']
+  updated_at timestamp [not null]
+}
+
+Ref: refresh_token.user_id > app_user.id
+Ref: refresh_token.replaced_by_token_id > refresh_token.id
+Ref: popup_engagement_summary.popup_store_id - popup_store.id [delete: cascade]
+Ref: popup_engagement_event.popup_store_id > popup_store.id [delete: cascade]
+Ref: popup_like.popup_store_id > popup_store.id [delete: cascade]
+Ref: popup_like.user_id > app_user.id
+Ref: popup_favorite.user_id > app_user.id
+Ref: popup_favorite.popup_store_id > popup_store.id
+Ref: visit_history.user_id > app_user.id
+Ref: visit_history.popup_store_id > popup_store.id
+Ref: popup_review.user_id > app_user.id
+Ref: popup_review.popup_store_id > popup_store.id
+Ref: popup_review.visit_history_id > visit_history.id
+Ref: popup_review_summary.popup_store_id - popup_store.id [delete: cascade]

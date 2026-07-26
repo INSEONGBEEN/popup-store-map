@@ -1,0 +1,20 @@
+<mxfile host="app.diagrams.net" modified="2026-07-26T00:00:00.000Z" agent="Codex" version="24.7.17">
+  <diagram id="system" name="System Architecture">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" page="1" pageWidth="1600" pageHeight="1000">
+      <root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="user" value="User&#xa;Desktop / Mobile" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1"><mxGeometry x="40" y="170" width="180" height="90" as="geometry"/></mxCell>
+        <mxCell id="web" value="React + TypeScript&#xa;Vite · Axios · OpenLayers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="300" y="140" width="240" height="150" as="geometry"/></mxCell>
+        <mxCell id="api" value="Spring Boot 4.1&#xa;Security · Controllers&#xa;Services · Repositories" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1"><mxGeometry x="650" y="120" width="260" height="190" as="geometry"/></mxCell>
+        <mxCell id="db" value="PostgreSQL + PostGIS&#xa;Flyway · JPA validate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1"><mxGeometry x="1030" y="140" width="220" height="150" as="geometry"/></mxCell>
+        <mxCell id="osm" value="OpenStreetMap&#xa;base tiles" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#00a2a5;" vertex="1" parent="1"><mxGeometry x="300" y="440" width="240" height="110" as="geometry"/></mxCell>
+        <mxCell id="valhalla" value="Valhalla&#xa;pedestrian route · matrix&#xa;Seoul OSM graph" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1"><mxGeometry x="650" y="410" width="260" height="150" as="geometry"/></mxCell>
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;" edge="1" parent="1" source="user" target="web"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" value="JSON / JWT" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;" edge="1" parent="1" source="web" target="api"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" value="JPA / SQL" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;" edge="1" parent="1" source="api" target="db"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" value="tiles" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;" edge="1" parent="1" source="web" target="osm"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5" value="route / matrix" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=block;" edge="1" parent="1" source="api" target="valhalla"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="820" viewBox="0 0 1440 820" role="img" aria-labelledby="title desc">
+  <title id="title">Current and target deployment architecture</title>
+  <desc id="desc">Verified local development topology compared with an explicitly planned production topology.</desc>
+  <defs>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#64748b"/></marker>
+    <style>.h{font:700 26px system-ui;fill:#172554}.s{font:600 16px system-ui;fill:#475569}.t{font:500 14px system-ui;fill:#334155}.b{stroke-width:2}.l{stroke:#64748b;stroke-width:3;fill:none;marker-end:url(#a)}</style>
+  </defs>
+  <rect width="1440" height="820" fill="#f8fafc"/>
+  <text x="65" y="62" class="h">Deployment Architecture</text>
+  <text x="65" y="92" class="s">Current local development versus planned production</text>
+  <rect x="55" y="125" width="620" height="630" rx="25" fill="#eff6ff" stroke="#60a5fa" class="b"/>
+  <text x="365" y="175" text-anchor="middle" class="h">Verified today · Local</text>
+  <rect x="105" y="215" width="200" height="90" rx="16" fill="white" stroke="#93c5fd" class="b"/>
+  <text x="205" y="250" text-anchor="middle" class="s">Browser</text><text x="205" y="278" text-anchor="middle" class="t">localhost / LAN / tunnel</text>
+  <rect x="425" y="215" width="200" height="90" rx="16" fill="white" stroke="#93c5fd" class="b"/>
+  <text x="525" y="250" text-anchor="middle" class="s">Vite 5173</text><text x="525" y="278" text-anchor="middle" class="t">React static dev server</text>
+  <rect x="425" y="370" width="200" height="90" rx="16" fill="white" stroke="#86efac" class="b"/>
+  <text x="525" y="405" text-anchor="middle" class="s">Spring Boot 8080</text><text x="525" y="433" text-anchor="middle" class="t">API + security</text>
+  <rect x="105" y="540" width="200" height="100" rx="16" fill="white" stroke="#c084fc" class="b"/>
+  <text x="205" y="578" text-anchor="middle" class="s">PostgreSQL</text><text x="205" y="606" text-anchor="middle" class="t">PostGIS + Flyway</text>
+  <rect x="425" y="540" width="200" height="100" rx="16" fill="white" stroke="#fb923c" class="b"/>
+  <text x="525" y="578" text-anchor="middle" class="s">Docker Valhalla</text><text x="525" y="606" text-anchor="middle" class="t">ignored graph volume</text>
+  <path d="M305 260 H425" class="l"/><path d="M525 305 V370" class="l"/><path d="M425 415 H205 V540" class="l"/><path d="M525 460 V540" class="l"/>
+  <text x="365" y="710" text-anchor="middle" class="t">OSM tiles are fetched from the browser; dev sample data is profile-gated.</text>
+
+  <rect x="765" y="125" width="620" height="630" rx="25" fill="#fff7ed" stroke="#fb923c" stroke-dasharray="10 8" class="b"/>
+  <text x="1075" y="175" text-anchor="middle" class="h">Planned · Not deployed</text>
+  <rect x="815" y="215" width="200" height="90" rx="16" fill="white" stroke="#fdba74" class="b"/>
+  <text x="915" y="250" text-anchor="middle" class="s">HTTPS + Domain</text><text x="915" y="278" text-anchor="middle" class="t">TLS / WAF decision pending</text>
+  <rect x="1135" y="215" width="200" height="90" rx="16" fill="white" stroke="#fdba74" class="b"/>
+  <text x="1235" y="250" text-anchor="middle" class="s">Static Frontend</text><text x="1235" y="278" text-anchor="middle" class="t">CDN or web server</text>
+  <rect x="1135" y="370" width="200" height="90" rx="16" fill="white" stroke="#86efac" class="b"/>
+  <text x="1235" y="405" text-anchor="middle" class="s">Spring Boot</text><text x="1235" y="433" text-anchor="middle" class="t">managed compute</text>
+  <rect x="815" y="540" width="200" height="100" rx="16" fill="white" stroke="#c084fc" class="b"/>
+  <text x="915" y="578" text-anchor="middle" class="s">Managed PostgreSQL</text><text x="915" y="606" text-anchor="middle" class="t">PostGIS + backups</text>
+  <rect x="1135" y="540" width="200" height="100" rx="16" fill="white" stroke="#fb923c" class="b"/>
+  <text x="1235" y="578" text-anchor="middle" class="s">Valhalla Service</text><text x="1235" y="606" text-anchor="middle" class="t">persistent tiles + updates</text>
+  <path d="M1015 260 H1135" class="l"/><path d="M1235 305 V370" class="l"/><path d="M1135 415 H915 V540" class="l"/><path d="M1235 460 V540" class="l"/>
+  <text x="1075" y="688" text-anchor="middle" class="t">Requires secrets, observability, backups, capacity tests and runbooks.</text>
+  <text x="1075" y="714" text-anchor="middle" class="t">No public live-demo URL is claimed in this repository.</text>
+</svg>
