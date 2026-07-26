@@ -35,7 +35,9 @@ public class CookieOriginFilter extends OncePerRequestFilter {
         if (origin != null && !properties.allowedOrigins().contains(origin)) {
             response.setStatus(HttpStatus.FORBIDDEN.value());
             response.setContentType("application/json");
-            response.getWriter().write("{\"status\":403,\"message\":\"허용되지 않은 요청 출처입니다.\"}");
+            response.getWriter().write(
+                    "{\"status\":403,\"code\":\"ORIGIN_NOT_ALLOWED\",\"message\":\"허용되지 않은 요청 출처입니다.\"}"
+            );
             return;
         }
         chain.doFilter(request, response);
