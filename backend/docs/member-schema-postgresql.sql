@@ -1,6 +1,6 @@
--- PostgreSQL 17 reference migration for member features.
--- Review this file and back up the database before applying it to an existing environment.
--- Hibernate ddl-auto remains unchanged; this script documents the controlled production order.
+-- Historical reference for the original member-feature rollout.
+-- Do not apply this file to a current environment.
+-- The executable schema source is src/main/resources/db/migration and Hibernate now validates it.
 
 BEGIN;
 

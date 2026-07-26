@@ -13,7 +13,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -55,7 +54,7 @@ public class PopupStore {
     @Column(length = 30)
     private PopupStoreStatus status;
 
-    @Lob
+    @Column(columnDefinition = "text")
     private String description;
 
     @Column(length = 500)
