@@ -1,6 +1,7 @@
 package com.inseongbeen.popupstoremap.popupstore.config;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.boot.ApplicationArguments;
@@ -26,13 +27,31 @@ public class PopupStoreDevDataInitializer implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        List<PopupStore> missingSamples = samples().stream()
-                .filter(sample -> !popupStoreRepository.existsByName(sample.getName()))
-                .toList();
+        List<PopupStore> missingSamples = new ArrayList<>();
+        samples().forEach(sample -> popupStoreRepository.findByName(sample.getName())
+                .ifPresentOrElse(
+                        existing -> synchronize(existing, sample),
+                        () -> missingSamples.add(sample)
+                ));
 
         if (!missingSamples.isEmpty()) {
             popupStoreRepository.saveAll(missingSamples);
         }
+    }
+
+    private void synchronize(PopupStore existing, PopupStore sample) {
+        existing.update(
+                sample.getName(),
+                sample.getAddress(),
+                sample.getLatitude(),
+                sample.getLongitude(),
+                sample.getStartDate(),
+                sample.getEndDate(),
+                sample.getCategory(),
+                sample.getStatus(),
+                sample.getDescription(),
+                sample.getImageUrl()
+        );
     }
 
     private List<PopupStore> samples() {
@@ -44,11 +63,11 @@ public class PopupStoreDevDataInitializer implements ApplicationRunner {
                 sample("[DEV] 성수 캐릭터 플레이룸", "서울특별시 성동구 연무장7길 8 (개발용 위치)",
                         37.54173, 127.05242, "2026-07-21", "2026-08-09", CHARACTER, OPEN),
                 sample("[DEV] 성수 디저트 테이블", "서울특별시 성동구 성수이로 72 (개발용 위치)",
-                        37.54314, 127.05791, "2026-07-10", "2026-07-24", FOOD, OPEN),
+                        37.54314, 127.05791, "2026-07-10", "2026-07-24", FOOD, CLOSED),
                 sample("[DEV] 성수 리빙 큐레이션", "서울특별시 성동구 성수이로7길 26 (개발용 위치)",
                         37.54571, 127.05376, "2026-07-20", "2026-08-20", LIFESTYLE, OPEN),
                 sample("[DEV] 성수 크리에이터 마켓", "서울특별시 성동구 연무장13길 5 (개발용 위치)",
-                        37.54401, 127.05944, "2026-07-21", "2026-07-21", ETC, OPEN),
+                        37.54401, 127.05944, "2026-07-21", "2026-07-21", ETC, CLOSED),
                 sample("[DEV] 서울숲 패션 아카이브", "서울특별시 성동구 서울숲2길 20 (개발용 위치)",
                         37.54677, 127.04182, "2026-08-01", "2026-08-31", FASHION, UPCOMING),
                 sample("[DEV] 서울숲 비건 뷰티바", "서울특별시 성동구 서울숲4길 18 (개발용 위치)",

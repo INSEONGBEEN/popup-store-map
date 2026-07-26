@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -24,7 +25,7 @@ class PopupStoreDevDataInitializerTests {
     @Test
     void insertsEighteenSamplesOnFirstRun() {
         PopupStoreRepository repository = mock(PopupStoreRepository.class);
-        when(repository.existsByName(anyString())).thenReturn(false);
+        when(repository.findByName(anyString())).thenReturn(Optional.empty());
         PopupStoreDevDataInitializer initializer = new PopupStoreDevDataInitializer(repository);
 
         initializer.run(mock(ApplicationArguments.class));
@@ -40,18 +41,32 @@ class PopupStoreDevDataInitializerTests {
     }
 
     @Test
-    void skipsExistingSamplesOnRestart() {
+    void synchronizesExistingSamplesWithoutInsertingDuplicates() {
         PopupStoreRepository repository = mock(PopupStoreRepository.class);
-        when(repository.existsByName(anyString())).thenReturn(true);
+        PopupStore existing = new PopupStore(
+                "existing",
+                "existing address",
+                37.0,
+                127.0,
+                LocalDate.of(2026, 1, 1),
+                LocalDate.of(2026, 1, 2),
+                null,
+                PopupStoreStatus.OPEN,
+                null,
+                null
+        );
+        when(repository.findByName(anyString())).thenReturn(Optional.of(existing));
         PopupStoreDevDataInitializer initializer = new PopupStoreDevDataInitializer(repository);
 
         initializer.run(mock(ApplicationArguments.class));
 
         verify(repository, never()).saveAll(anyList());
+        assertThat(existing.getName()).startsWith("[DEV]");
+        assertThat(existing.getDescription()).contains("개발 및 테스트용");
     }
 
     private void assertStatusesMatchReferenceDate(List<PopupStore> samples) {
-        LocalDate referenceDate = LocalDate.of(2026, 7, 21);
+        LocalDate referenceDate = LocalDate.of(2026, 7, 26);
 
         assertThat(samples).allSatisfy(sample -> {
             if (sample.getStatus() == PopupStoreStatus.OPEN) {

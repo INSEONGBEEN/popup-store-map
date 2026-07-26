@@ -24,6 +24,30 @@ public interface VisitHistoryRepository extends JpaRepository<VisitHistory, Long
     List<Long> findVisitedPopupStoreIds(@Param("userId") Long userId,
                                         @Param("popupStoreIds") Collection<Long> popupStoreIds);
 
+    @Query("""
+            select distinct visit.user.id from VisitHistory visit
+            where visit.popupStore.id = :popupStoreId
+              and visit.user.id in :userIds
+              and visit.source = :source
+            """)
+    List<Long> findUserIdsByPopupStoreIdAndUserIdInAndSource(
+            @Param("popupStoreId") Long popupStoreId,
+            @Param("userIds") Collection<Long> userIds,
+            @Param("source") com.inseongbeen.popupstoremap.visit.entity.VisitSource source
+    );
+
+    @Query("""
+            select distinct visit.popupStore.id from VisitHistory visit
+            where visit.user.id = :userId
+              and visit.popupStore.id in :popupStoreIds
+              and visit.source = :source
+            """)
+    List<Long> findPopupStoreIdsByUserIdAndPopupStoreIdInAndSource(
+            @Param("userId") Long userId,
+            @Param("popupStoreIds") Collection<Long> popupStoreIds,
+            @Param("source") com.inseongbeen.popupstoremap.visit.entity.VisitSource source
+    );
+
     @EntityGraph(attributePaths = "popupStore")
     @Query("""
             select visit from VisitHistory visit

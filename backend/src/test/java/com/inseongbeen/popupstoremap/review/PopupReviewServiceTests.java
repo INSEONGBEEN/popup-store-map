@@ -16,6 +16,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.PersistenceContext;
 
 import com.inseongbeen.popupstoremap.auth.dto.SignupRequestDto;
 import com.inseongbeen.popupstoremap.auth.exception.AuthException;
@@ -47,6 +53,8 @@ class PopupReviewServiceTests {
     @Autowired AppUserRepository userRepository;
     @Autowired RefreshTokenRepository refreshTokenRepository;
     @Autowired AuthService authService;
+    @Autowired EntityManagerFactory entityManagerFactory;
+    @PersistenceContext EntityManager entityManager;
 
     private Long popupStoreId;
     private Authentication owner;
@@ -130,6 +138,29 @@ class PopupReviewServiceTests {
                 new ReviewRequestDto(6, "평점 범위를 벗어나는 리뷰입니다."), owner)).isInstanceOf(AuthException.class);
         assertThatThrownBy(() -> reviewService.create(popupStoreId,
                 new ReviewRequestDto(3, "짧음"), owner)).isInstanceOf(AuthException.class);
+    }
+
+    @Test
+    void publicReviewListBatchLoadsVerifiedVisitStatus() {
+        visitService.record(owner, popupStoreId,
+                new VisitRequestDto(VisitSource.NAVIGATION_ARRIVAL, null, "owner-route"));
+        visitService.record(other, popupStoreId,
+                new VisitRequestDto(VisitSource.MANUAL_CONFIRMATION, null, null));
+        reviewService.create(popupStoreId,
+                new ReviewRequestDto(5, "쿼리 기준선을 측정하는 첫 번째 리뷰입니다."), owner);
+        reviewService.create(popupStoreId,
+                new ReviewRequestDto(4, "쿼리 기준선을 측정하는 두 번째 리뷰입니다."), other);
+
+        Statistics statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+        statistics.setStatisticsEnabled(true);
+        entityManager.clear();
+        statistics.clear();
+
+        reviewService.list(popupStoreId, "latest", PageRequest.of(0, 10), null);
+
+        long queryCount = statistics.getPrepareStatementCount();
+        System.out.println("REVIEW_LIST_OPTIMIZED_QUERY_COUNT=" + queryCount);
+        assertThat(queryCount).isEqualTo(3);
     }
 
     private static Authentication auth(Long userId) {

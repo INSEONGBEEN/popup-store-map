@@ -19,7 +19,7 @@ public interface PopupStoreRepository extends
         JpaRepository<PopupStore, Long>,
         JpaSpecificationExecutor<PopupStore> {
 
-    boolean existsByName(String name);
+    Optional<PopupStore> findByName(String name);
 
     List<PopupStore> findAllByStatusIn(Collection<PopupStoreStatus> statuses);
 

@@ -1,12 +1,15 @@
 package com.inseongbeen.popupstoremap.review.service;
 
 import java.util.Map;
+import java.util.Set;
+import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -58,8 +61,13 @@ public class PopupReviewService {
         if (!popupStoreRepository.existsById(popupStoreId)) throw new PopupStoreNotFoundException(popupStoreId);
         Long currentUserId = currentUser.optional(authentication).map(AppUser::getId).orElse(null);
         Pageable safe = PageRequest.of(pageable.getPageNumber(), Math.min(pageable.getPageSize(), 50), reviewSort(order));
-        return PageResponseDto.from(reviewRepository.findAllByPopupStoreId(popupStoreId, safe)
-                .map(review -> response(review, currentUserId)));
+        Page<PopupReview> reviews = reviewRepository.findAllByPopupStoreId(popupStoreId, safe);
+        Set<Long> verifiedUserIds = verifiedUserIds(popupStoreId, reviews.getContent());
+        return PageResponseDto.from(reviews.map(review -> response(
+                review,
+                verifiedUserIds.contains(review.getUser().getId()),
+                currentUserId
+        )));
     }
 
     @Transactional
@@ -113,8 +121,11 @@ public class PopupReviewService {
         AppUser user = currentUser.require(authentication);
         Pageable safe = PageRequest.of(pageable.getPageNumber(), Math.min(pageable.getPageSize(), 50),
                 Sort.by(Sort.Direction.DESC, "updatedAt"));
-        return PageResponseDto.from(reviewRepository.findAllByUserId(user.getId(), safe)
-                .map(review -> MyReviewResponseDto.from(review, verified(review))));
+        Page<PopupReview> reviews = reviewRepository.findAllByUserId(user.getId(), safe);
+        Set<Long> verifiedPopupStoreIds = verifiedPopupStoreIds(user.getId(), reviews.getContent());
+        return PageResponseDto.from(reviews.map(review -> MyReviewResponseDto.from(
+                review, verifiedPopupStoreIds.contains(review.getPopupStore().getId())
+        )));
     }
 
     public Map<Long, ReviewSummaryDto> summaries(java.util.Collection<Long> popupStoreIds) {
@@ -137,13 +148,34 @@ public class PopupReviewService {
     }
 
     private ReviewResponseDto response(PopupReview review, Long currentUserId) {
-        return ReviewResponseDto.from(review, verified(review),
+        return response(review, verified(review), currentUserId);
+    }
+
+    private ReviewResponseDto response(PopupReview review, boolean verified, Long currentUserId) {
+        return ReviewResponseDto.from(review, verified,
                 currentUserId != null && review.getUser().getId().equals(currentUserId));
     }
 
     private boolean verified(PopupReview review) {
         return visitRepository.existsByUserIdAndPopupStoreIdAndSource(
                 review.getUser().getId(), review.getPopupStore().getId(), VisitSource.NAVIGATION_ARRIVAL);
+    }
+
+    private Set<Long> verifiedUserIds(Long popupStoreId, java.util.Collection<PopupReview> reviews) {
+        if (reviews.isEmpty()) return Set.of();
+        List<Long> userIds = reviews.stream().map(review -> review.getUser().getId()).distinct().toList();
+        return Set.copyOf(visitRepository.findUserIdsByPopupStoreIdAndUserIdInAndSource(
+                popupStoreId, userIds, VisitSource.NAVIGATION_ARRIVAL
+        ));
+    }
+
+    private Set<Long> verifiedPopupStoreIds(Long userId, java.util.Collection<PopupReview> reviews) {
+        if (reviews.isEmpty()) return Set.of();
+        List<Long> popupStoreIds = reviews.stream()
+                .map(review -> review.getPopupStore().getId()).distinct().toList();
+        return Set.copyOf(visitRepository.findPopupStoreIdsByUserIdAndPopupStoreIdInAndSource(
+                userId, popupStoreIds, VisitSource.NAVIGATION_ARRIVAL
+        ));
     }
 
     private PopupReviewSummary getSummary(Long popupStoreId) {
