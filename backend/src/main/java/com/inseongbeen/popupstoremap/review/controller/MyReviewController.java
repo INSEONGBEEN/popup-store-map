@@ -9,17 +9,20 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.inseongbeen.popupstoremap.popupstore.dto.PageResponseDto;
 import com.inseongbeen.popupstoremap.review.dto.MyReviewResponseDto;
-import com.inseongbeen.popupstoremap.review.service.PopupReviewService;
+import com.inseongbeen.popupstoremap.review.service.PopupReviewQueryService;
 
 @RestController
 @RequestMapping("/api/users/me/reviews")
 public class MyReviewController {
-    private final PopupReviewService reviewService;
-    public MyReviewController(PopupReviewService reviewService) { this.reviewService = reviewService; }
+    private final PopupReviewQueryService reviewQueryService;
+
+    public MyReviewController(PopupReviewQueryService reviewQueryService) {
+        this.reviewQueryService = reviewQueryService;
+    }
 
     @GetMapping
     public PageResponseDto<MyReviewResponseDto> mine(Authentication authentication,
                                                       @PageableDefault(size = 10) Pageable pageable) {
-        return reviewService.mine(authentication, pageable);
+        return reviewQueryService.mine(authentication, pageable);
     }
 }

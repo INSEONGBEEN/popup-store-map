@@ -42,13 +42,15 @@ Development seed data contains 18 clearly labeled `[DEV]` popups. It is not veri
 
 ## 🎨 UI Design (Figma)
 
-The connected Figma account was available only with a read-only seat during this documentation pass, so no editable Figma file or fake Figma link was created. Verified screenshots and a Figma-ready specification are committed instead.
+The implementation was captured into an editable Figma portfolio file. It contains a cover, design-system components, the full desktop application, a map/route presentation, and mobile responsive screens. The connected starter workspace limits the file to three pages, so related desktop and mobile frames are grouped on the presentation page.
+
+[Open the Popup Store Map Figma file](https://www.figma.com/design/aPPGnSFCyHihzF53uTCaOT)
 
 | Artifact | Link |
 |---|---|
 | Screen inventory | [docs/ui/screen-inventory.md](docs/ui/screen-inventory.md) |
 | Design system | [docs/ui/design-system.md](docs/ui/design-system.md) |
-| Figma-ready frames/components | [docs/ui/figma-spec.md](docs/ui/figma-spec.md) |
+| Figma structure and handoff | [docs/ui/figma-spec.md](docs/ui/figma-spec.md) |
 | Desktop map | [docs/ui/assets/map-desktop.png](docs/ui/assets/map-desktop.png) |
 | Mobile home | [docs/ui/assets/home-mobile.png](docs/ui/assets/home-mobile.png) |
 | Mobile login | [docs/ui/assets/login-mobile.png](docs/ui/assets/login-mobile.png) |

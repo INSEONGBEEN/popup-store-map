@@ -27,7 +27,7 @@ import com.inseongbeen.popupstoremap.popupstore.repository.PopupStoreRepository;
 import com.inseongbeen.popupstoremap.popupstore.repository.PopupStoreSpecification;
 import com.inseongbeen.popupstoremap.review.dto.ReviewSummaryDto;
 import com.inseongbeen.popupstoremap.review.repository.PopupReviewRepository;
-import com.inseongbeen.popupstoremap.review.service.PopupReviewService;
+import com.inseongbeen.popupstoremap.review.service.PopupReviewQueryService;
 import com.inseongbeen.popupstoremap.visit.repository.VisitHistoryRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -45,7 +45,7 @@ public class PopupStoreQueryService {
 
     private final PopupStoreRepository popupStoreRepository;
     private final PopupEngagementService engagementService;
-    private final PopupReviewService reviewService;
+    private final PopupReviewQueryService reviewQueryService;
     private final PopupFavoriteRepository favoriteRepository;
     private final VisitHistoryRepository visitRepository;
     private final PopupReviewRepository reviewRepository;
@@ -85,7 +85,7 @@ public class PopupStoreQueryService {
         if (stores.isEmpty()) return List.of();
         List<Long> ids = stores.stream().map(PopupStore::getId).toList();
         Map<Long, PopupEngagementDto> engagement = engagementService.summaries(ids, anonymousVisitorId, userId);
-        Map<Long, ReviewSummaryDto> reviews = reviewService.summaries(ids);
+        Map<Long, ReviewSummaryDto> reviews = reviewQueryService.summaries(ids);
         Map<Long, PopupPersonalizationDto> personalization = personalization(ids, userId);
         return stores.stream().map(store -> PopupStoreResponseDto.from(
                 store,

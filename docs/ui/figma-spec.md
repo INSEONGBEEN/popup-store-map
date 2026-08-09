@@ -1,19 +1,21 @@
-# Figma-ready UI Specification
+# Figma UI Specification
 
 ## Availability note
 
-The connected Figma account was authenticated during this documentation pass, but its seat exposed read-only access. No editable Figma file or Figma URL was created. This document and the verified screenshots are the handoff source for a future editable file.
+The connected account reports a `View` seat, but creating and editing a new draft file was available and verified during the follow-up pass.
 
-## Suggested page structure
+[Open the editable Popup Store Map Figma file](https://www.figma.com/design/aPPGnSFCyHihzF53uTCaOT)
 
-1. `00 Cover`
-2. `01 Foundations`
-3. `02 Components`
-4. `03 Desktop`
-5. `04 Tablet`
-6. `05 Mobile`
-7. `06 Flows`
-8. `07 Prototype notes`
+The starter workspace permits three pages in this file. The implemented structure therefore groups related presentation frames without removing any source screen:
+
+1. `01 Cover`
+2. `02 Design System`
+3. `03 Desktop`
+   - Captured full application
+   - `04 Map & Route / Presentation`
+   - `05 Mobile / Responsive Experience`
+
+The design-system page contains editable color swatches, typography, button, chip, search-input, and popup-card elements. The screen frames use verified implementation captures rather than invented product states.
 
 ## Frames
 

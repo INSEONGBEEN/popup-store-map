@@ -4,6 +4,7 @@
 
 ### Added
 
+- 실제 구현 화면을 기반으로 한 편집 가능한 Figma 포트폴리오 파일과 Notion/Figma 후속 검증 보고서
 - 실제 코드 기준 포트폴리오 문서 세트: 시스템/배포 아키텍처, DBML ERD, API 명세, 기능 흐름, UI·Figma handoff, 테스트 전략, 성능 baseline
 - localhost에서 검증한 desktop/mobile discovery, map, login UI 스크린샷
 - Flyway V1/V2 PostgreSQL schema migration과 PostgreSQL 17/PostGIS Testcontainers 검증
@@ -43,6 +44,7 @@
 
 ### Changed
 
+- 리뷰 조회·요약과 생성·수정·삭제 책임을 Query/Command service로 분리하고 Controller와 PopupStore 조회 서비스의 의존 범위를 축소
 - README를 프로젝트 개요, UI, Architecture, ERD, API, 구현, 테스트, 배포, 문제 해결, 회고 중심 포트폴리오 구조로 재작성
 - Hibernate schema 자동 변경을 `ddl-auto=validate`로 전환
 - PopupStore service를 command/query/ranking 책임으로 분리하고 기존 facade contract 유지
